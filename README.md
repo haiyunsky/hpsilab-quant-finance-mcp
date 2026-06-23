@@ -6,7 +6,11 @@
 
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io)
 
-Institutional-grade quantitative stock analysis for AI assistants.
+⭐ If you find HPSILab useful, please star the repository.
+
+Institutional-grade quantitative stock analysis for AI assistants and MCP clients.
+
+Analyze stocks using AI forecasting, options positioning, volatility intelligence, Monte Carlo simulation, and strategy backtesting through a single MCP tool.
 
 **Official Remote MCP Endpoint**
 
@@ -141,6 +145,14 @@ MCP Server, Stock Analysis, Quantitative Finance, AI Trading, Options Analytics,
 
 ## MCP Client Configuration
 
+### Get an API Key
+
+Create a free HPSILab account:
+
+https://hpsilab.com
+
+Generate your API key from the dashboard and use it in your MCP client configuration.
+
 ### Cursor (Remote MCP)
 
 ```json
@@ -159,14 +171,15 @@ MCP Server, Stock Analysis, Quantitative Finance, AI Trading, Options Analytics,
 ### Cursor (Self Hosted)
 
 ```json
+
 {
   "mcpServers": {
     "hpsilab": {
-      "command": "python",
-      "args": ["src/server.py"]
+      "command": "hpsilab-mcp-server"
     }
   }
 }
+
 ```
 
 ### Claude Desktop
