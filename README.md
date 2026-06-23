@@ -1,193 +1,31 @@
-# HPSILab MCP Server
+# HPSI Lab MCP Server
 
-Institutional-grade quantitative stock analysis for AI agents via MCP.
+Quantitative stock analysis and signal generation MCP server.
 
-Model Context Protocol (MCP) server for quantitative stock analysis powered by HPSI Lab.
+## Features
 
-## Overview
-
-HPSILab MCP enables AI agents and MCP-compatible clients to access quantitative equity analysis through a standardized MCP interface.
-
-The server exposes stock analysis tools while abstracting the underlying research infrastructure, factor models, and market data pipelines.
-
-### Features
-
-* Quantitative stock analysis
-* Bullish / bearish factor breakdown
-* Directional scoring
-* MCP-compatible tool interface
-* Local and remote deployment
-
-## Architecture
-
-```text
-AI Client
-    │
-    ▼
-HPSILab MCP Server
-    │
-    ▼
-HPSI Quant Engine
-    │
-    ├── Market Data
-    ├── Factor Models
-    ├── Signal Engine
-    └── Risk Models
-```
+- Technical analysis
+- Trend detection
+- Bullish/Bearish scoring
+- Support & resistance
+- Risk analysis
 
 ## Installation
 
-### Clone Repository
-
-```bash
-git clone https://github.com/haiyunsky/hpsilab-mcp-server.git
-
-cd hpsilab-mcp-server
-```
-
-### Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### Start Server
-
-```bash
-python src/server.py
-```
-
-## MCP Configuration
-
-### Local Server
-
-```json
-{
-  "mcpServers": {
-    "hpsilab": {
-      "command": "python",
-      "args": [
-        "src/server.py"
-      ]
-    }
-  }
-}
-```
-
-### Remote Server
-
-```json
-{
-  "mcpServers": {
-    "hpsilab": {
-      "url": "https://hpsilab.com/mcp"
-    }
-  }
-}
-```
+...
 
 ## Available Tools
 
 ### analyze_stock
 
-Analyze a stock using HPSI quantitative models.
+Analyze a stock and return:
 
-Input:
+- Direction
+- Direction score
+- Bullish factors
+- Bearish factors
+- Technical indicators
 
-```json
-{
-  "symbol": "AAPL"
-}
-```
+## Example
 
-Example Output:
-
-```json
-{
-  "symbol": "AAPL",
-  "direction": "bullish",
-  "score": 82,
-  "bullish_factors": [
-    "Strong earnings revisions",
-    "Positive momentum"
-  ],
-  "bearish_factors": [
-    "Premium valuation"
-  ]
-}
-```
-
-## Reference Implementation
-
-```python
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("HPSILab MCP Server")
-
-
-@mcp.tool()
-async def analyze_stock(symbol: str):
-    """
-    Analyze a stock using HPSI Lab Quant Engine.
-    """
-
-    # Production implementation calls hosted services.
-    return {
-        "symbol": symbol,
-        "status": "success"
-    }
-
-
-if __name__ == "__main__":
-    mcp.run()
-```
-
-## Development
-
-Run locally:
-
-```bash
-python src/server.py
-```
-
-Run tests:
-
-```bash
-pytest
-```
-
-## Production Service
-
-Production MCP endpoint:
-
-https://hpsilab.com/mcp
-
-The production service may provide additional quantitative models, research signals, and datasets not included in this repository.
-
-## Open Source vs Production
-
-This repository includes:
-
-* MCP server definitions
-* Tool schemas
-* Reference implementations
-* Development examples
-
-The production HPSI Lab platform additionally includes:
-
-* Proprietary quantitative models
-* Institutional research signals
-* Commercial datasets
-* Advanced risk analytics
-
-## Disclaimer
-
-This repository contains MCP server definitions, tool schemas, transport examples, and reference implementations.
-
-Proprietary quantitative models, research infrastructure, and commercial datasets remain the intellectual property of HPSI Lab and are not included.
-
-## License
-
-MIT License.
-
-See LICENSE for details.
+...
