@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+src/hpsilab_mcp_server/__init__.py
+src/hpsilab_mcp_server/server.py
+src/hpsilab_mcp_server.egg-info/PKG-INFO
+src/hpsilab_mcp_server.egg-info/SOURCES.txt
+src/hpsilab_mcp_server.egg-info/dependency_links.txt
+src/hpsilab_mcp_server.egg-info/entry_points.txt
+src/hpsilab_mcp_server.egg-info/requires.txt
+src/hpsilab_mcp_server.egg-info/top_level.txt

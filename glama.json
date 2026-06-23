@@ -1,11 +1,13 @@
 {
   "name": "hpsilab-mcp-server",
-  "description": "Quantitative stock analysis MCP server providing technical analysis, trading signals and market insights.",
-  "maintainers": [
-    "haiyunsky"
-  ],
+  "description": "Institutional-grade quantitative stock analysis MCP server.",
+  "repository": "https://github.com/haiyunsky/hpsilab-mcp-server",
+  "homepage": "https://hpsilab.com",
+  "license": "MIT",
+  "maintainers": ["haiyunsky"],
   "categories": [
     "finance",
-    "analysis"
+    "analysis",
+    "trading"
   ]
 }

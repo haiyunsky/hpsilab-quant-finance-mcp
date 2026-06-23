@@ -1,0 +1,2 @@
+[console_scripts]
+hpsilab-mcp-server = hpsilab_mcp_server.server:main

@@ -37,5 +37,8 @@ def analyze_stock(symbol: str):
             "message": str(e)
         }
 
-if __name__ == "__main__":
+def main():
     mcp.run()
+
+if __name__ == "__main__":
+    main()
