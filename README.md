@@ -1,28 +1,41 @@
-# HPSI Lab MCP Server
+## Installation
 
-8 Quant Finance Tools for AI Agents.
+```bash
+pip install -r requirements.txt
+python src/server.py
+```
 
-Remote MCP server providing:
+## Reference Implementation
 
-- Stock Analysis
-- ETF Analysis
-- Portfolio Analysis
-- Factor Analysis
-- Risk Analysis
-- Market Research
-- Macro Analysis
-- Screening
+Example MCP server:
 
-## Endpoint
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("HPSILab MCP Server")
+
+@mcp.tool()
+async def analyze_stock(symbol: str):
+    return {
+        "symbol": symbol,
+        "status": "success"
+    }
+
+if __name__ == "__main__":
+    mcp.run()
+```
+
+## Architecture
+
+AI Client
+→ HPSI Lab MCP Server
+→ HPSI Quant Engine
+→ Market Data & Models
+
+The production MCP server is hosted at:
 
 https://hpsilab.com/mcp
 
-## MCP Transport
+This repository contains MCP server definitions, tool schemas, transport examples, and reference implementations.
 
-- Streamable HTTP
-
-## Notes
-
-This repository contains the MCP server interface and tool schemas.
-
-Proprietary quantitative models and data infrastructure remain hosted on HPSI Lab services.
+Production quantitative models, proprietary datasets, and research infrastructure are not included.

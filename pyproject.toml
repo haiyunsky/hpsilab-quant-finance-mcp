@@ -1,0 +1,2 @@
+[project.scripts]
+hpsilab-mcp-server = "hpsilab_mcp.server:main"

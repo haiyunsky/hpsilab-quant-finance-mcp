@@ -1,0 +1,18 @@
+{
+  "name": "HPSILab MCP Server",
+  "description": "8 Quant Finance Tools for AI Agents",
+  "transport": {
+    "type": "streamable-http",
+    "url": "https://hpsilab.com/mcp"
+  },
+  "tools": [
+    "analyze_stock",
+    "get_ai_prediction",
+    "get_iv_radar",
+    "get_option_pressure",
+    "get_monte_carlo",
+    "get_equity_curves",
+    "generate_stock_images",
+    "generate_stock_research_report"
+  ]
+}

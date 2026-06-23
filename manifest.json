@@ -1,0 +1,48 @@
+{
+  "name": "hpsilab-mcp-server",
+  "display_name": "HPSILab MCP Server",
+  "version": "1.0.0",
+  "description": "8 Quant Finance Tools for AI Agents",
+  "author": "Haiyun Hu",
+  "homepage": "https://hpsilab.com",
+  "repository": "https://github.com/haiyunsky/hpsilab-mcp-server",
+  "license": "MIT",
+  "server": {
+    "transport": "streamable-http",
+    "endpoint": "https://hpsilab.com/mcp"
+  },
+  "tools": [
+    {
+      "name": "analyze_stock",
+      "description": "Aggregate stock analysis"
+    },
+    {
+      "name": "get_ai_prediction",
+      "description": "AI prediction and model consensus"
+    },
+    {
+      "name": "get_iv_radar",
+      "description": "IV rank, percentile, skew and regime"
+    },
+    {
+      "name": "get_option_pressure",
+      "description": "Options pressure and gamma analysis"
+    },
+    {
+      "name": "get_monte_carlo",
+      "description": "Monte Carlo simulation"
+    },
+    {
+      "name": "get_equity_curves",
+      "description": "Strategy equity curves"
+    },
+    {
+      "name": "generate_stock_images",
+      "description": "Generate stock analysis charts"
+    },
+    {
+      "name": "generate_stock_research_report",
+      "description": "Generate stock research reports"
+    }
+  ]
+}

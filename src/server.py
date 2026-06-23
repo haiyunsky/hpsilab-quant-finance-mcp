@@ -1,10 +1,19 @@
-from fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("HPSI Lab MCP Server")
+mcp = FastMCP("HPSILab MCP Server")
 
-@mcp.tool
-def stock_analysis(symbol: str):
-    return {"symbol": symbol, "rating": "Buy"}
+
+@mcp.tool()
+async def analyze_stock(symbol: str):
+    """
+    Analyze a stock using HPSI Lab Quant Engine.
+    """
+    # Production implementation calls hosted services.
+    return {
+        "symbol": symbol,
+        "status": "success"
+    }
+
 
 if __name__ == "__main__":
     mcp.run()
