@@ -1,4 +1,11 @@
 from mcp.server.fastmcp import FastMCP
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("HPSILAB_API_KEY")
 
 mcp = FastMCP("HPSILab MCP Server")
 
@@ -11,14 +18,24 @@ def analyze_stock(symbol: str):
         symbol: Stock ticker symbol.
 
     Returns:
-        Direction score and technical analysis.
+        Quantitative analysis report.
     """
-    # Production implementation calls hosted services.
-    return {
-        "symbol": symbol,
-        "status": "success"
-    }
+    try:
+        response = requests.get(
+            f"https://hpsilab.com/api/analyze_stock/{symbol}",
+            headers={
+                "Authorization": f"Bearer {API_KEY}"
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
 
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 if __name__ == "__main__":
     mcp.run()
