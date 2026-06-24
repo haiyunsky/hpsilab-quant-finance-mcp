@@ -24,7 +24,7 @@ https://hpsilab.com/mcp
 
 ### Step 1 — Get an API Key
 
-Create an account at [hpsilab.com](https://hpsilab.com) and generate an API key (`hpsi_...`) from the dashboard.
+Create an account at [hpsilab.com](https://hpsilab.com) and generate an API key (`hpsi_...`) from the settings.
 
 ### Step 2 — Which option should I use?
 
