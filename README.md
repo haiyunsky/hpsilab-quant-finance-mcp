@@ -1,4 +1,4 @@
-# HPSILab MCP Server — Real-Time Stock & Options Intelligence for AI Agents
+# HPSILab MCP Server — Real-Time AI Trading & Options Intelligence for Stock & Quant Agents
 
 [![Website](https://img.shields.io/badge/HPSILab-hpsilab.com-orange)](https://hpsilab.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
