@@ -1,8 +1,8 @@
 {
   "name": "hpsilab-mcp-server",
-  "display_name": "HPSILab MCP Server",
-  "version": "1.0.0",
-  "description": "8 Quant Finance Tools for AI Agents",
+  "display_name": "Quant Finance MCP Server by HPSILab",
+  "version": "0.3.0",
+  "description": "Quant finance MCP server for stock analysis, options analytics, implied volatility, Monte Carlo simulation, AI prediction, and backtesting.",
   "author": "Haiyun Hu",
   "homepage": "https://hpsilab.com",
   "repository": "https://github.com/haiyunsky/hpsilab-mcp-server",
@@ -14,35 +14,35 @@
   "tools": [
     {
       "name": "analyze_stock",
-      "description": "Aggregate stock analysis"
+      "description": "Aggregate stock analysis for quantitative finance research"
     },
     {
       "name": "get_ai_prediction",
-      "description": "AI prediction and model consensus"
+      "description": "AI stock prediction and model consensus"
     },
     {
       "name": "get_iv_radar",
-      "description": "IV rank, percentile, skew and regime"
+      "description": "Implied volatility rank, percentile, skew and regime"
     },
     {
       "name": "get_option_pressure",
-      "description": "Options pressure and gamma analysis"
+      "description": "Options analytics for pressure zones, gamma walls and max pain"
     },
     {
       "name": "get_monte_carlo",
-      "description": "Monte Carlo simulation"
+      "description": "Monte Carlo stock simulation"
     },
     {
       "name": "get_equity_curves",
-      "description": "Strategy equity curves"
+      "description": "Backtesting and strategy equity curves"
     },
     {
       "name": "generate_stock_images",
-      "description": "Generate stock analysis charts"
+      "description": "Generate stock analysis and options chart images"
     },
     {
       "name": "generate_stock_research_report",
-      "description": "Generate stock research reports"
+      "description": "Generate stock research reports for financial analysis"
     }
   ]
 }

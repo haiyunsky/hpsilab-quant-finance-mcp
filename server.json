@@ -1,6 +1,13 @@
 {
   "name": "HPSILab MCP Server",
   "tools": [
-    "analyze_stock"
+    "analyze_stock",
+    "get_ai_prediction",
+    "get_iv_radar",
+    "get_option_pressure",
+    "get_monte_carlo",
+    "get_equity_curves",
+    "generate_stock_images",
+    "generate_stock_research_report"
   ]
 }

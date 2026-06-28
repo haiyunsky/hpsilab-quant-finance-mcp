@@ -12,35 +12,132 @@ tickers; Pro / Team keys unlock the full universe.
 Remote endpoint: https://hpsilab.com/mcp
 """
 
-from mcp.server.fastmcp import FastMCP
-import requests
 import os
+import re
+from typing import Any
+
+import requests
 from dotenv import load_dotenv
+from mcp.server.fastmcp import FastMCP
 
-load_dotenv()
-
-API_KEY = os.getenv("HPSILAB_API_KEY", "")
 BASE_URL = "https://hpsilab.com/api"
 TIMEOUT = 30
+DISCLAIMER = (
+    "Research and educational output only. This is not investment advice, "
+    "financial advice, or a recommendation to buy or sell any security."
+)
+SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9.-]{0,15}$")
 
 mcp = FastMCP("HPSILab MCP Server")
 
 
 # ── shared helper ──────────────────────────────────────────────────────────────
 
-def _get(path: str, params: dict | None = None) -> dict:
+def _error(
+    error_code: str,
+    message: str,
+    *,
+    status_code: int | None = None,
+    symbol: str | None = None,
+    details: Any | None = None,
+) -> dict:
+    """Return a consistent error payload for MCP clients."""
+    payload: dict[str, Any] = {
+        "status": "error",
+        "error_code": error_code,
+        "message": message,
+        "disclaimer": DISCLAIMER,
+    }
+    if status_code is not None:
+        payload["status_code"] = status_code
+    if symbol is not None:
+        payload["symbol"] = symbol
+    if details is not None:
+        payload["details"] = details
+    return payload
+
+
+def _get_api_key() -> str:
+    return os.getenv("HPSILAB_API_KEY", "").strip()
+
+
+def _normalize_symbol(symbol: str) -> str:
+    if not isinstance(symbol, str):
+        raise ValueError("symbol must be a ticker string, such as 'NVDA' or 'SPY'.")
+
+    normalized = symbol.strip().upper()
+    if not SYMBOL_PATTERN.fullmatch(normalized):
+        raise ValueError(
+            "symbol must be an exchange ticker using letters, numbers, '.', or '-', "
+            "for example 'NVDA', 'SPY', or 'BRK.B'."
+        )
+    return normalized
+
+
+def _message_from_response(response: requests.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        return response.text[:500] or response.reason
+
+    if isinstance(payload, dict):
+        for key in ("message", "error", "detail"):
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+        return str(payload)
+
+    return str(payload)
+
+
+def _get(path: str, *, symbol: str | None = None, params: dict | None = None) -> dict:
     """Make an authenticated GET request to the HPSILab API."""
+    api_key = _get_api_key()
+    if not api_key:
+        return _error(
+            "missing_api_key",
+            "Set HPSILAB_API_KEY to a valid HPSILab API key before calling this tool.",
+            symbol=symbol,
+        )
+
     try:
         response = requests.get(
             f"{BASE_URL}/{path}",
-            headers={"Authorization": f"Bearer {API_KEY}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             params=params or {},
             timeout=TIMEOUT,
         )
         response.raise_for_status()
         return response.json()
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except requests.exceptions.HTTPError as exc:
+        response = exc.response
+        status_code = response.status_code if response is not None else None
+        message = _message_from_response(response) if response is not None else str(exc)
+        return _error(
+            "http_error",
+            message,
+            status_code=status_code,
+            symbol=symbol,
+        )
+    except requests.exceptions.Timeout:
+        return _error(
+            "request_timeout",
+            f"HPSILab API request timed out after {TIMEOUT} seconds.",
+            symbol=symbol,
+        )
+    except requests.exceptions.RequestException as exc:
+        return _error("request_failed", str(exc), symbol=symbol)
+    except ValueError as exc:
+        return _error("invalid_json", f"HPSILab API returned invalid JSON: {exc}", symbol=symbol)
+
+
+def _get_symbol_endpoint(endpoint: str, symbol: str) -> dict:
+    try:
+        normalized_symbol = _normalize_symbol(symbol)
+    except ValueError as exc:
+        return _error("invalid_symbol", str(exc))
+
+    return _get(f"{endpoint}/{normalized_symbol}", symbol=normalized_symbol)
 
 
 # ── Tool 1 — comprehensive analysis ───────────────────────────────────────────
@@ -84,7 +181,7 @@ def analyze_stock(symbol: str) -> dict:
     - Free-tier keys are limited to a predefined ticker set.
     - Response latency is ~5–15 s due to multi-model aggregation.
     """
-    return _get(f"analyze_stock/{symbol.upper()}")
+    return _get_symbol_endpoint("analyze_stock", symbol)
 
 
 # ── Tool 2 — IV radar ─────────────────────────────────────────────────────────
@@ -120,7 +217,7 @@ def get_iv_radar(symbol: str) -> dict:
         risk_reversal   : float — 25-delta risk reversal (positive = call-skew)
         volatility_regime: str  — "Low" | "Normal" | "Elevated" | "Extreme"
     """
-    return _get(f"iv_radar/{symbol.upper()}")
+    return _get_symbol_endpoint("iv_radar", symbol)
 
 
 # ── Tool 3 — option pressure ──────────────────────────────────────────────────
@@ -154,7 +251,7 @@ def get_option_pressure(symbol: str) -> dict:
         expiry_date   : str   — target expiry date (YYYY-MM-DD)
         pressure_zones: list  — list of significant strike/OI concentration dicts
     """
-    return _get(f"option_pressure/{symbol.upper()}")
+    return _get_symbol_endpoint("option_pressure", symbol)
 
 
 # ── Tool 4 — Monte Carlo ──────────────────────────────────────────────────────
@@ -192,7 +289,7 @@ def get_monte_carlo(symbol: str) -> dict:
                                  {"bins": list, "frequencies": list,
                                   "kde_x": list, "kde_y": list}
     """
-    return _get(f"monte_carlo/{symbol.upper()}")
+    return _get_symbol_endpoint("monte_carlo", symbol)
 
 
 # ── Tool 5 — AI prediction ────────────────────────────────────────────────────
@@ -231,7 +328,7 @@ def get_ai_prediction(symbol: str) -> dict:
         regime          : str   — "Bull" | "Bear" | "Chop" market regime
         signal_strength : str   — "Strong" | "Moderate" | "Weak"
     """
-    return _get(f"ai_prediction/{symbol.upper()}")
+    return _get_symbol_endpoint("ai_prediction", symbol)
 
 
 # ── Tool 6 — equity curves ────────────────────────────────────────────────────
@@ -269,7 +366,7 @@ def get_equity_curves(symbol: str) -> dict:
             pl_ratio      : float — average win / average loss
             equity_curve  : list  — daily portfolio value series
     """
-    return _get(f"equity_curves/{symbol.upper()}")
+    return _get_symbol_endpoint("equity_curves", symbol)
 
 
 # ── Tool 7 — stock research report ───────────────────────────────────────────
@@ -320,7 +417,7 @@ def generate_stock_research_report(symbol: str) -> dict:
     - Free-tier keys are limited to a predefined ticker set.
     - For programmatic use, prefer analyze_stock which returns structured JSON.
     """
-    return _get(f"stock_research_report/{symbol.upper()}")
+    return _get_symbol_endpoint("stock_research_report", symbol)
 
 
 # ── Tool 8 — stock chart images ───────────────────────────────────────────────
@@ -354,12 +451,13 @@ def generate_stock_images(symbol: str) -> dict:
         options_flow_url: str — URL to options flow heatmap (PNG)
         expires_at      : str — ISO 8601 expiry timestamp for the URLs
     """
-    return _get(f"stock_images/{symbol.upper()}")
+    return _get_symbol_endpoint("stock_images", symbol)
 
 
 # ── entry point ────────────────────────────────────────────────────────────────
 
 def main():
+    load_dotenv()
     mcp.run()
 
 

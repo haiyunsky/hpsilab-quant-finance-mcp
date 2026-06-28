@@ -1,4 +1,4 @@
-# HPSILab MCP Server — Real-Time AI Trading & Options Intelligence for Stock & Quant Agents
+# Quant Finance MCP Server for Stock Analysis and Options Analytics - HPSILab
 
 [![Website](https://img.shields.io/badge/HPSILab-hpsilab.com-orange)](https://hpsilab.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -7,11 +7,13 @@
 [![Glama](https://glama.ai/mcp/servers/haiyunsky/hpsilab-mcp-server/badge)](https://glama.ai/mcp/servers/haiyunsky/hpsilab-mcp-server)
 [![Smithery](https://smithery.ai/badge/g-scorpiosky/hpsilab-quantum-finance)](https://smithery.ai/servers/g-scorpiosky/hpsilab-quantum-finance)
 
-⭐ If you find HPSILab useful, please star the repository.
+If this quant finance MCP server is useful, please star the repository.
 
-**8-tool MCP server for US equity options intelligence: real-time IV radar, Monte Carlo price simulation, options pressure maps, equity curve backtesting, and quantum ML prediction signals for AI-driven trading research.**
+**8-tool Model Context Protocol server for quantitative finance, stock analysis, options analytics, implied volatility radar, Monte Carlo stock simulation, AI prediction signals, and backtesting.**
 
-Analyze stocks using AI forecasting, options positioning, implied volatility intelligence, Monte Carlo simulation, and strategy backtesting — each exposed as a dedicated MCP tool.
+Use HPSILab with Claude, Cursor, ChatGPT Agents, Cline, Windsurf, and other MCP-compatible clients to research US equities and options workflows from a single API-backed toolset.
+
+Best fit: active investors, options researchers, quant developers, financial research teams, and AI agent builders who need market data analysis tools rather than generic chat output.
 
 **Official Remote MCP Endpoint**
 
@@ -32,7 +34,7 @@ Create an account at [hpsilab.com](https://hpsilab.com) and generate an API key 
 | Option | Setup Time | Best For |
 | --- | --- | --- |
 | Remote MCP (`https://hpsilab.com/mcp`) | Instant | Most users |
-| Python REST SDK (`pip install hpsilab-mcp`) | Instant | Python developers |
+| Python REST SDK (`pip install hpsilab-mcp`, current version 0.3.0) | Instant | Python developers |
 | Self-Hosted MCP Server | 2–3 minutes | Self-hosted setups |
 | Enterprise Deployment | Custom | Organizations |
 
@@ -49,15 +51,17 @@ https://hpsilab.com/mcp
 ```bash
 git clone https://github.com/haiyunsky/hpsilab-mcp-server.git
 cd hpsilab-mcp-server
-pip install -r requirements.txt
-python src/hpsilab_mcp_server/server.py
+pip install .
+cp env.example .env
+# edit .env and set HPSILAB_API_KEY=hpsi_your_key
+hpsilab-mcp-server
 ```
 
 ---
 
 ## Python REST SDK
 
-If you prefer direct REST access without MCP transport, use the official Python SDK. You'll need an API key — see [Step 1](#step-1--get-an-api-key) in Quick Start.
+If you prefer direct REST access without MCP transport, use the official Python SDK package `hpsilab-mcp`. The SDK is currently published as version `0.3.0`. You'll need an API key — see [Step 1](#step-1--get-an-api-key) in Quick Start.
 
 ### Installation
 
@@ -258,6 +262,8 @@ Returns public URLs for three charts: candlestick price chart, 3-D IV surface, a
 
 ## Example
 
+More copy-paste prompts are available in [examples/prompts.md](examples/prompts.md).
+
 ```python
 # Quick directional verdict
 analyze_stock("NVDA")
@@ -315,6 +321,25 @@ Quant Platform  (IV engine · ML models · Monte Carlo · Backtester)
 ## Supported MCP Clients
 
 Cursor · Claude Desktop · Claude Code · ChatGPT Agents · Cline · Roo Code · Windsurf · Continue · Any MCP-compatible client
+
+---
+
+## Who Pays for This
+
+This server is built for users who already have a recurring research workflow:
+
+- Options traders who repeatedly check IV rank, skew, expected move, gamma walls, max pain, and squeeze targets.
+- Quant developers who want MCP-native access to Monte Carlo simulations, AI prediction signals, and equity curve backtests.
+- Financial advisors, research writers, and market analysts who need repeatable stock research reports and charts.
+- AI agent builders who need stock analysis tools for Claude, Cursor, ChatGPT Agents, Cline, Windsurf, or custom MCP clients.
+
+The strongest paid use case is not generic stock chat. It is saving time on repeat options and quant research tasks that a user already performs every week.
+
+---
+
+## Search Keywords
+
+Quant finance MCP server, stock analysis MCP server, options analytics MCP server, implied volatility MCP server, Monte Carlo stock simulation MCP, AI stock prediction MCP, backtesting MCP server, Claude stock analysis MCP, Cursor finance MCP server, ChatGPT stock analysis MCP, financial research MCP tools, Model Context Protocol finance tools.
 
 ---
 

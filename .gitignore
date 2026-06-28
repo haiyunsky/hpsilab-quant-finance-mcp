@@ -1,5 +1,10 @@
 __pycache__/
 *.pyc
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+docs/
 uv.lock
 .env
 .env.*

@@ -11,10 +11,41 @@ where = ["src"]
 
 [project]
 name = "hpsilab-mcp-server"
-version = "0.1.0"
-description = "HPSILab MCP Server"
+version = "0.3.0"
+description = "Quant finance MCP server for stock analysis, options analytics, implied volatility, Monte Carlo simulation, AI prediction, and backtesting."
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Haiyun Hu" }
+]
+keywords = [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "quantitative-finance",
+    "financial-research",
+    "stock-analysis",
+    "options-analytics",
+    "implied-volatility",
+    "monte-carlo",
+    "backtesting",
+    "ai-agent",
+    "claude-mcp",
+    "cursor-mcp"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
 
 dependencies = [
     "requests>=2.32.0",
@@ -26,3 +57,9 @@ dependencies = [
 
 [project.scripts]
 hpsilab-mcp-server = "hpsilab_mcp_server.server:main"
+
+[project.urls]
+Homepage = "https://hpsilab.com"
+Repository = "https://github.com/haiyunsky/hpsilab-mcp-server"
+"MCP Directory" = "https://glama.ai/mcp/servers/haiyunsky/hpsilab-mcp-server"
+"Python REST SDK" = "https://pypi.org/project/hpsilab-mcp/"

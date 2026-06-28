@@ -1,1 +1,0 @@
-hpsilab_mcp_server
