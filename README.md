@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io)
 [![PyPI](https://img.shields.io/pypi/v/hpsilab-mcp?label=PyPI)](https://pypi.org/project/hpsilab-mcp/)
-[![Glama](https://glama.ai/mcp/servers/haiyunsky/hpsilab-mcp-server/badge)](https://glama.ai/mcp/servers/haiyunsky/hpsilab-mcp-server)
+[![Glama](https://glama.ai/mcp/servers/haiyunsky/hpsilab-quant-finance-mcp/badge)](https://glama.ai/mcp/servers/haiyunsky/hpsilab-quant-finance-mcp)
 [![Smithery](https://smithery.ai/badge/g-scorpiosky/hpsilab-quantum-finance)](https://smithery.ai/servers/g-scorpiosky/hpsilab-quantum-finance)
 
 If this quant finance MCP server is useful, please star the repository.
@@ -49,12 +49,12 @@ https://hpsilab.com/mcp
 ### Option 2 — Open Source Self-Hosted MCP Server
 
 ```bash
-git clone https://github.com/haiyunsky/hpsilab-mcp-server.git
-cd hpsilab-mcp-server
+git clone https://github.com/haiyunsky/hpsilab-quant-finance-mcp.git
+cd hpsilab-quant-finance-mcp
 pip install .
 cp env.example .env
 # edit .env and set HPSILAB_API_KEY=hpsi_your_key
-hpsilab-mcp-server
+hpsilab-quant-finance-mcp
 ```
 
 ---
@@ -168,7 +168,7 @@ client.generate_stock_research_report("NVDA")
 {
   "mcpServers": {
     "hpsilab": {
-      "command": "hpsilab-mcp-server"
+      "command": "hpsilab-quant-finance-mcp"
     }
   }
 }
@@ -303,7 +303,7 @@ get_monte_carlo("NVDA")
 ```text
 AI Client (Claude / Cursor / Windsurf / ...)
     ↓  MCP protocol
-hpsilab-mcp-server  (this repo)
+hpsilab-quant-finance-mcp  (this repo)
     ↓  HTTPS REST
 HPSILab Quant API  (hpsilab.com)
     ↓
