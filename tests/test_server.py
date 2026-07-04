@@ -7,7 +7,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from hpsilab_mcp_server import server
+from hpsilab_quant_finance_mcp import server
 
 
 class FakeResponse:
@@ -63,19 +63,42 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test_api_key")
         self.assertEqual(kwargs["timeout"], server.TIMEOUT)
 
+    def test_pretrade_risk_scan_uses_symbol_query_parameter(self):
+        response_payload = {
+            "symbol": "NVDA",
+            "risk_level": "moderate",
+            "checks": [{"name": "liquidity", "status": "pass"}],
+        }
+
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
+            with mock.patch.object(
+                server.requests,
+                "get",
+                return_value=FakeResponse(response_payload),
+            ) as request_get:
+                result = server.get_pretrade_risk_scan("nvda")
+
+        self.assertEqual(result, response_payload)
+        request_get.assert_called_once()
+        args, kwargs = request_get.call_args
+        self.assertEqual(args[0], "https://hpsilab.com/api/pretrade-risk-scan")
+        self.assertEqual(kwargs["params"], {"symbol": "NVDA"})
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test_api_key")
+        self.assertEqual(kwargs["timeout"], server.TIMEOUT)
+
     def test_http_error_returns_structured_payload(self):
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
             with mock.patch.object(
                 server.requests,
                 "get",
-                return_value=FakeResponse({"message": "free tier limit"}, status_code=403),
+                return_value=FakeResponse({"message": "quota exceeded"}, status_code=403),
             ):
                 result = server.get_iv_radar("SPY")
 
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["error_code"], "http_error")
         self.assertEqual(result["status_code"], 403)
-        self.assertEqual(result["message"], "free tier limit")
+        self.assertEqual(result["message"], "quota exceeded")
         self.assertEqual(result["symbol"], "SPY")
 
 

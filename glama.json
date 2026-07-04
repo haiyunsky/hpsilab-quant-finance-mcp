@@ -1,7 +1,7 @@
 {
   "name": "hpsilab-mcp-server",
-  "description": "Quant finance MCP server for stock analysis, options analytics, implied volatility radar, Monte Carlo stock simulation, AI prediction signals, backtesting, research reports, and chart visualization.",
-  "repository": "https://github.com/haiyunsky/hpsilab-mcp-server",
+  "description": "9-tool quant finance MCP server for stock analysis, options analytics, implied volatility radar, Monte Carlo stock simulation, AI prediction signals, pre-trade risk scanning, backtesting, research reports, and chart visualization.",
+  "repository": "https://github.com/haiyunsky/hpsilab-quant-finance-mcp",
   "homepage": "https://hpsilab.com",
   "license": "MIT",
   "maintainers": [

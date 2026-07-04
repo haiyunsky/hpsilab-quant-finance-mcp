@@ -1,13 +1,13 @@
 """
 HPSILab MCP Server
 ==================
-Exposes 8 institutional-grade quantitative finance tools for AI agents.
+Exposes 9 institutional-grade quantitative finance tools for AI agents.
 
 Authentication
 --------------
 Set the HPSILAB_API_KEY environment variable to a valid HPSILab API key
-(format: hpsi_...).  Free-tier keys have access to a limited set of
-tickers; Pro / Team keys unlock the full universe.
+(format: hpsi_...).  This server registers the full 9-tool surface; the
+hosted API may enforce account-level quotas, rate limits, and symbol coverage.
 
 Remote endpoint: https://hpsilab.com/mcp
 """
@@ -140,6 +140,15 @@ def _get_symbol_endpoint(endpoint: str, symbol: str) -> dict:
     return _get(f"{endpoint}/{normalized_symbol}", symbol=normalized_symbol)
 
 
+def _get_symbol_query_endpoint(endpoint: str, symbol: str) -> dict:
+    try:
+        normalized_symbol = _normalize_symbol(symbol)
+    except ValueError as exc:
+        return _error("invalid_symbol", str(exc))
+
+    return _get(endpoint, symbol=normalized_symbol, params={"symbol": normalized_symbol})
+
+
 # ── Tool 1 — comprehensive analysis ───────────────────────────────────────────
 
 @mcp.tool()
@@ -178,7 +187,7 @@ def analyze_stock(symbol: str) -> dict:
     Notes
     -----
     - Requires a valid HPSILAB_API_KEY.
-    - Free-tier keys are limited to a predefined ticker set.
+    - API access, quota, and ticker coverage are governed by the HPSILab account.
     - Response latency is ~5–15 s due to multi-model aggregation.
     """
     return _get_symbol_endpoint("analyze_stock", symbol)
@@ -414,7 +423,7 @@ def generate_stock_research_report(symbol: str) -> dict:
     Notes
     -----
     - Requires a valid HPSILAB_API_KEY.
-    - Free-tier keys are limited to a predefined ticker set.
+    - API access, quota, and ticker coverage are governed by the HPSILab account.
     - For programmatic use, prefer analyze_stock which returns structured JSON.
     """
     return _get_symbol_endpoint("stock_research_report", symbol)
@@ -452,6 +461,36 @@ def generate_stock_images(symbol: str) -> dict:
         expires_at      : str — ISO 8601 expiry timestamp for the URLs
     """
     return _get_symbol_endpoint("stock_images", symbol)
+
+
+# ── Tool 9 — pre-trade risk scan ───────────────────────────────────────────────
+
+@mcp.tool()
+def get_pretrade_risk_scan(symbol: str) -> dict:
+    """
+    Retrieve a pre-trade risk scan for a single stock.
+
+    Use this tool when:
+    - You need a risk-first check before evaluating or placing a trade.
+    - You want the API's complete pre-trade risk assessment for a ticker.
+    - You need the raw HPSILab risk-scan JSON for downstream processing.
+
+    Parameters
+    ----------
+    symbol : str
+        Exchange ticker in uppercase, e.g. "NVDA", "AAPL", "SPY".
+
+    Example
+    -------
+    get_pretrade_risk_scan("NVDA")
+
+    Returns
+    -------
+    dict
+        Full JSON response from GET /api/pretrade-risk-scan?symbol={symbol},
+        returned without modification.
+    """
+    return _get_symbol_query_endpoint("pretrade-risk-scan", symbol)
 
 
 # ── entry point ────────────────────────────────────────────────────────────────

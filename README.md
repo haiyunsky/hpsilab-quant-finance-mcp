@@ -9,7 +9,7 @@
 
 If this quant finance MCP server is useful, please star the repository.
 
-**8-tool Model Context Protocol server for quantitative finance, stock analysis, options analytics, implied volatility radar, Monte Carlo stock simulation, AI prediction signals, and backtesting.**
+**9-tool Model Context Protocol server for quantitative finance, stock analysis, options analytics, implied volatility radar, Monte Carlo stock simulation, AI prediction signals, pre-trade risk scanning, research reports, chart visualization, and backtesting.**
 
 Use HPSILab with Claude, Cursor, ChatGPT Agents, Cline, Windsurf, and other MCP-compatible clients to research US equities and options workflows from a single API-backed toolset.
 
@@ -34,7 +34,7 @@ Create an account at [hpsilab.com](https://hpsilab.com) and generate an API key 
 | Option | Setup Time | Best For |
 | --- | --- | --- |
 | Remote MCP (`https://hpsilab.com/mcp`) | Instant | Most users |
-| Python REST SDK (`pip install hpsilab-mcp`, current version 0.3.0) | Instant | Python developers |
+| Python REST SDK (`pip install hpsilab-mcp`) | Instant | Python developers |
 | Self-Hosted MCP Server | 2–3 minutes | Self-hosted setups |
 | Enterprise Deployment | Custom | Organizations |
 
@@ -59,9 +59,29 @@ hpsilab-quant-finance-mcp
 
 ---
 
+## Full Feature Access
+
+The HPSILab MCP server exposes all 9 tools through both the official remote endpoint and the open source self-hosted server. No MCP tool is hidden behind a local feature flag in this repository.
+
+| Tool | Remote MCP | Self-hosted MCP | Python REST SDK |
+| --- | --- | --- | --- |
+| `analyze_stock` | Available | Available | Available |
+| `get_ai_prediction` | Available | Available | Available |
+| `get_iv_radar` | Available | Available | Available |
+| `get_option_pressure` | Available | Available | Available |
+| `get_monte_carlo` | Available | Available | Available |
+| `get_equity_curves` | Available | Available | Available |
+| `get_pretrade_risk_scan` | Available | Available | Available |
+| `generate_stock_images` | Available | Available | Available |
+| `generate_stock_research_report` | Available | Available | Available |
+
+All calls still require a valid HPSILab API key. The hosted API may enforce account-level usage quotas, rate limits, and symbol coverage, but the MCP server registers the complete tool surface.
+
+---
+
 ## Python REST SDK
 
-If you prefer direct REST access without MCP transport, use the official Python SDK package `hpsilab-mcp`. The SDK is currently published as version `0.3.0`. You'll need an API key — see [Step 1](#step-1--get-an-api-key) in Quick Start.
+If you prefer direct REST access without MCP transport, use the official Python SDK package `hpsilab-mcp`. You'll need an API key — see [Step 1](#step-1--get-an-api-key) in Quick Start.
 
 ### Installation
 
@@ -92,6 +112,7 @@ client.get_ai_prediction("NVDA")
 client.get_iv_radar("NVDA")
 client.get_option_pressure("NVDA")
 client.get_monte_carlo("NVDA")
+client.get_pretrade_risk_scan("NVDA")
 client.get_equity_curves("NVDA")
 client.generate_stock_images("NVDA")
 client.generate_stock_research_report("NVDA")
@@ -103,12 +124,13 @@ client.generate_stock_research_report("NVDA")
 | --- | --- |
 | `analyze_stock(symbol)` | `GET /api/analyze_stock/{symbol}` |
 | `get_ai_prediction(symbol)` | `GET /api/ai_prediction/{symbol}` |
-| `get_iv_radar(symbol)` | `GET /api/iv_batch?symbols={symbol}` |
+| `get_iv_radar(symbol)` | `GET /api/iv_radar/{symbol}` |
 | `get_option_pressure(symbol)` | `GET /api/option_pressure/{symbol}` |
 | `get_monte_carlo(symbol)` | `GET /api/monte_carlo/{symbol}` |
-| `get_equity_curves(symbol)` | `GET /api/equity_curve/{symbol}` |
-| `generate_stock_images(symbol)` | `POST /api/stock_report/{symbol}/images` |
-| `generate_stock_research_report(symbol)` | `POST /api/stock_report/{symbol}/research_report` |
+| `get_equity_curves(symbol)` | `GET /api/equity_curves/{symbol}` |
+| `get_pretrade_risk_scan(symbol)` | `GET /api/pretrade-risk-scan?symbol={symbol}` |
+| `generate_stock_images(symbol)` | `GET /api/stock_images/{symbol}` |
+| `generate_stock_research_report(symbol)` | `GET /api/stock_research_report/{symbol}` |
 
 ### Capability Matrix
 
@@ -120,6 +142,7 @@ client.generate_stock_research_report("NVDA")
 | `get_option_pressure` | ✅ | ✅ |
 | `get_monte_carlo` | ✅ | ✅ |
 | `get_equity_curves` | ✅ | ✅ |
+| `get_pretrade_risk_scan` | ✅ | ✅ |
 | `generate_stock_images` | ✅ | ✅ |
 | `generate_stock_research_report` | ✅ | ✅ |
 
@@ -240,6 +263,22 @@ Backtested equity curves and risk-adjusted metrics (Sharpe, Sortino, max drawdow
 
 ---
 
+### `get_pretrade_risk_scan`
+
+Pre-trade risk scan for a single stock, returned as the full API JSON response without modification.
+
+**Parameters:** `symbol` (required) - exchange ticker, e.g. `"NVDA"`, `"AAPL"`, `"SPY"`.
+
+**Example:**
+
+```python
+get_pretrade_risk_scan("NVDA")
+```
+
+**Returns:** full JSON response from `GET /api/pretrade-risk-scan?symbol={symbol}`
+
+---
+
 ### `generate_stock_research_report`
 
 Generates a structured markdown research note synthesizing all signal sources, suitable for sharing with investors.
@@ -273,6 +312,9 @@ get_iv_radar("NVDA")
 
 # Probabilistic price range
 get_monte_carlo("NVDA")
+
+# Pre-trade risk scan
+get_pretrade_risk_scan("NVDA")
 ```
 
 **Example `analyze_stock` response:**
@@ -339,7 +381,7 @@ The strongest paid use case is not generic stock chat. It is saving time on repe
 
 ## Search Keywords
 
-Quant finance MCP server, stock analysis MCP server, options analytics MCP server, implied volatility MCP server, Monte Carlo stock simulation MCP, AI stock prediction MCP, backtesting MCP server, Claude stock analysis MCP, Cursor finance MCP server, ChatGPT stock analysis MCP, financial research MCP tools, Model Context Protocol finance tools.
+Quant finance MCP server, stock analysis MCP server, options analytics MCP server, implied volatility MCP server, Monte Carlo stock simulation MCP, AI stock prediction MCP, backtesting MCP server, pre-trade risk MCP server, stock research report MCP, stock chart generation MCP, Claude stock analysis MCP, Cursor finance MCP server, ChatGPT stock analysis MCP, financial research MCP tools, Model Context Protocol finance tools, risk management, portfolio risk, portfolio allocation, exposure analysis, position sizing, implied volatility.
 
 ---
 
