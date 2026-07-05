@@ -1,6 +1,6 @@
 {
   "name": "hpsilab-quant-finance-mcp",
-  "version": "1.0.0",
+  "version": "0.4.0",
   "description": "9-tool quant finance MCP server for stock analysis, options analytics, implied volatility radar, Monte Carlo stock simulation, AI prediction signals, pre-trade risk scanning, backtesting, research reports, and chart visualization.",
   "tools": [
     {
