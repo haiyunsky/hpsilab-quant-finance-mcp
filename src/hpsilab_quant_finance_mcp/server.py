@@ -468,12 +468,24 @@ def generate_stock_images(symbol: str) -> dict:
 @mcp.tool()
 def get_pretrade_risk_scan(symbol: str) -> dict:
     """
-    Retrieve a pre-trade risk scan for a single stock.
+    Run a pre-trade risk scan for adding a single stock to the user's tracked
+    portfolio, covering volatility/beta/VaR/drawdown deltas, market regime,
+    a forward return distribution, position-sizing checks, sector/symbol
+    exposure impact, and correlation against existing holdings.
 
     Use this tool when:
     - You need a risk-first check before evaluating or placing a trade.
-    - You want the API's complete pre-trade risk assessment for a ticker.
-    - You need the raw HPSILab risk-scan JSON for downstream processing.
+    - You want position-sizing guardrails (volatility, drawdown, beta,
+      liquidity) evaluated against warn/fail thresholds, not just raw numbers.
+    - You need to see how adding this symbol would shift sector or
+      per-symbol concentration in the existing portfolio.
+    - You want the new symbol's correlation to current holdings, to judge
+      diversification benefit vs. redundant exposure.
+
+    Do NOT use this tool for:
+    - A standalone price-distribution simulation with no portfolio context →
+      use get_monte_carlo instead.
+    - A general bullish/bearish read on the stock → use analyze_stock.
 
     Parameters
     ----------
@@ -486,9 +498,52 @@ def get_pretrade_risk_scan(symbol: str) -> dict:
 
     Returns
     -------
-    dict
-        Full JSON response from GET /api/pretrade-risk-scan?symbol={symbol},
-        returned without modification.
+    dict with keys:
+        symbol         : str   — normalized ticker
+        asOf           : str   — ISO 8601 date the scan was computed
+        regime         : str   — "bull" | "bear" | "chop" market regime
+        regimeConfidence: float — 0–1 confidence in the regime classification
+        riskDeltas     : list  — before/after risk metrics from adding the
+                                  position, each item a dict with:
+            label           : str   — e.g. "Annualized Volatility", "Beta (vs SPY)",
+                                       "1-Day VaR (95%)", "Max Drawdown (1Y)"
+            beforeValue     : float — metric value for current portfolio
+            afterValue      : float — metric value after adding the position
+            unit            : str   — "%" or "" (unitless, e.g. beta)
+            higherIsRiskier : bool  — whether an increase in this metric is worse
+        distribution   : dict  — forward return distribution:
+                                  {"bins": list, "frequencies": list,
+                                   "kde_x": list, "kde_y": list}
+        range_90       : dict  — {"lower": float, "upper": float} 90 % CI on
+                                  forward return (%)
+        mean           : float — expected forward return (%)
+        threshold      : float — reference return threshold used in the scan
+        sizingChecks   : list  — pass/warn/fail guardrail checks, each a dict:
+            label   : str — "Volatility" | "Drawdown Risk" | "Market Exposure"
+                            | "Liquidity"
+            status  : str — "pass" | "warn" | "fail"
+            detail  : str — human-readable explanation with the thresholds used
+        exposure       : dict  — portfolio concentration impact:
+            available            : bool
+            bySector             : list of {sector, currentPct, postTradePct, deltaPct}
+            bySymbol             : list of {symbol, currentPct, postTradePct, deltaPct}
+            concentrationFlag    : str  — "pass" | "warn" | "fail"
+            assumedPositionWeight: float — assumed weight of the new position
+            weightingMethod      : str  — e.g. "equal_weight_proxy"
+        correlation    : dict  — correlation of the new symbol to holdings:
+            available : bool
+            aggregate : dict — {avgCorrelationWithPortfolio, level,
+                                 mostCorrelated: {symbol, correlation},
+                                 leastCorrelated: {symbol, correlation}}
+            matrix    : dict — {"symbols": list, "values": list[list[float]]}
+                                full pairwise correlation matrix
+
+    Notes
+    -----
+    - Requires a valid HPSILAB_API_KEY.
+    - Exposure and correlation sections assume the user has an existing
+      tracked portfolio; if none exists, "available" is false in those
+      sections and their contents should not be relied upon.
     """
     return _get_symbol_query_endpoint("pretrade-risk-scan", symbol)
 
