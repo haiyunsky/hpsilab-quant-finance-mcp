@@ -1,5 +1,5 @@
 """
-HPSILab MCP Server
+Quant Finance MCP Server for Stock Analysis and Options Analytics - HPSILab
 ==================
 Exposes 9 institutional-grade quantitative finance tools for AI agents.
 
