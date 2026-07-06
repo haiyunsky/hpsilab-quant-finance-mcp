@@ -524,26 +524,49 @@ def get_pretrade_risk_scan(symbol: str) -> dict:
             status  : str — "pass" | "warn" | "fail"
             detail  : str — human-readable explanation with the thresholds used
         exposure       : dict  — portfolio concentration impact:
-            available            : bool
+            available            : bool  — false if the user has no watchlist
+                                            symbols to compare against
             bySector             : list of {sector, currentPct, postTradePct, deltaPct}
+                                            — empty list when available is false
             bySymbol             : list of {symbol, currentPct, postTradePct, deltaPct}
-            concentrationFlag    : str  — "pass" | "warn" | "fail"
-            assumedPositionWeight: float — assumed weight of the new position
+                                            — empty list when available is false
+            concentrationFlag    : str  — "pass" | "warn" | "fail" | "unknown"
+                                            ("unknown" when available is false)
+            assumedPositionWeight: float | None — None when available is false
             weightingMethod      : str  — e.g. "equal_weight_proxy"
+            reason                : str  — present only when available is false;
+                                            human-readable explanation (e.g. "No
+                                            watchlist symbols to compare against.
+                                            Add symbols to your watchlist to see
+                                            portfolio exposure.") — surface this
+                                            to the user instead of guessing why
+                                            the section is empty
         correlation    : dict  — correlation of the new symbol to holdings:
-            available : bool
-            aggregate : dict — {avgCorrelationWithPortfolio, level,
-                                 mostCorrelated: {symbol, correlation},
-                                 leastCorrelated: {symbol, correlation}}
-            matrix    : dict — {"symbols": list, "values": list[list[float]]}
-                                full pairwise correlation matrix
+            available : bool  — false if the user has no watchlist symbols to
+                                 compare against
+            aggregate : dict | None — None when available is false; otherwise
+                                 {avgCorrelationWithPortfolio, level,
+                                  mostCorrelated: {symbol, correlation},
+                                  leastCorrelated: {symbol, correlation}}
+            matrix    : dict | None — None when available is false; otherwise
+                                 {"symbols": list, "values": list[list[float]]}
+                                 full pairwise correlation matrix
+            reason    : str  — present only when available is false;
+                                 human-readable explanation (e.g. "No watchlist
+                                 symbols to compare against. Add symbols to your
+                                 watchlist to see correlation.") — surface this
+                                 to the user instead of guessing why the section
+                                 is empty
 
     Notes
     -----
     - Requires a valid HPSILAB_API_KEY.
     - Exposure and correlation sections assume the user has an existing
-      tracked portfolio; if none exists, "available" is false in those
-      sections and their contents should not be relied upon.
+      tracked watchlist/portfolio. If none exists, "available" is false in
+      both sections, their data fields are null/empty, and each includes a
+      "reason" string explaining why — relay that reason to the user (e.g.
+      suggest adding symbols to their watchlist) rather than treating the
+      missing data as an error.
     """
     return _get_symbol_query_endpoint("pretrade-risk-scan", symbol)
 
