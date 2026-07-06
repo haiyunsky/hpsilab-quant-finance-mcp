@@ -1,6 +1,6 @@
 """
 Quant Finance MCP Server for Stock Analysis and Options Analytics - HPSILab
-==================
+============================================================================
 Exposes 9 institutional-grade quantitative finance tools for AI agents.
 
 Authentication
@@ -14,11 +14,12 @@ Remote endpoint: https://hpsilab.com/mcp
 
 import os
 import re
-from typing import Any
+from typing import Annotated, Any
 
 import requests
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 
 BASE_URL = "https://hpsilab.com/api"
 TIMEOUT = 30
@@ -28,7 +29,7 @@ DISCLAIMER = (
 )
 SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9.-]{0,15}$")
 
-mcp = FastMCP("HPSILab MCP Server")
+mcp = FastMCP("Quant Finance MCP Server for Stock Analysis and Options Analytics - HPSILab")
 
 
 # ── shared helper ──────────────────────────────────────────────────────────────
@@ -152,7 +153,19 @@ def _get_symbol_query_endpoint(endpoint: str, symbol: str) -> dict:
 # ── Tool 1 — comprehensive analysis ───────────────────────────────────────────
 
 @mcp.tool()
-def analyze_stock(symbol: str) -> dict:
+def analyze_stock(
+    symbol: Annotated[
+        str,
+        Field(
+            description=(
+                "Exchange ticker in uppercase, e.g. 'NVDA', 'AAPL', 'SPY', 'QQQ'. "
+                "Do NOT pass company names ('Nvidia') — use official tickers only."
+            ),
+            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+            examples=["NVDA", "AAPL", "SPY", "QQQ"],
+        ),
+    ],
+) -> dict:
     """
     Run a full institutional-grade quantitative analysis for a single stock.
 
@@ -196,7 +209,19 @@ def analyze_stock(symbol: str) -> dict:
 # ── Tool 2 — IV radar ─────────────────────────────────────────────────────────
 
 @mcp.tool()
-def get_iv_radar(symbol: str) -> dict:
+def get_iv_radar(
+    symbol: Annotated[
+        str,
+        Field(
+            description=(
+                "Exchange ticker in uppercase, e.g. 'TSLA', 'NVDA', 'IWM'. "
+                "Do NOT pass company names — use official tickers only."
+            ),
+            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+            examples=["TSLA", "NVDA", "IWM"],
+        ),
+    ],
+) -> dict:
     """
     Retrieve implied-volatility (IV) metrics for a single stock.
 
@@ -232,7 +257,19 @@ def get_iv_radar(symbol: str) -> dict:
 # ── Tool 3 — option pressure ──────────────────────────────────────────────────
 
 @mcp.tool()
-def get_option_pressure(symbol: str) -> dict:
+def get_option_pressure(
+    symbol: Annotated[
+        str,
+        Field(
+            description=(
+                "Exchange ticker in uppercase, e.g. 'AAPL', 'SPY', 'NVDA'. "
+                "Do NOT pass company names — use official tickers only."
+            ),
+            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+            examples=["AAPL", "SPY", "NVDA"],
+        ),
+    ],
+) -> dict:
     """
     Retrieve options-market positioning and dealer-hedging pressure zones.
 
@@ -266,7 +303,19 @@ def get_option_pressure(symbol: str) -> dict:
 # ── Tool 4 — Monte Carlo ──────────────────────────────────────────────────────
 
 @mcp.tool()
-def get_monte_carlo(symbol: str) -> dict:
+def get_monte_carlo(
+    symbol: Annotated[
+        str,
+        Field(
+            description=(
+                "Exchange ticker in uppercase, e.g. 'MSFT', 'NVDA', 'SPY'. "
+                "Do NOT pass company names — use official tickers only."
+            ),
+            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+            examples=["MSFT", "NVDA", "SPY"],
+        ),
+    ],
+) -> dict:
     """
     Run a Monte Carlo price-path simulation for a stock over a 30-day horizon.
 
@@ -304,7 +353,21 @@ def get_monte_carlo(symbol: str) -> dict:
 # ── Tool 5 — AI prediction ────────────────────────────────────────────────────
 
 @mcp.tool()
-def get_ai_prediction(symbol: str) -> dict:
+def get_ai_prediction(
+    symbol: Annotated[
+        str,
+        Field(
+            description=(
+                "Exchange ticker in uppercase, e.g. 'NVDA', 'META', 'QQQ'. "
+                "Do NOT pass company names — use official tickers only. "
+                "Per-ticker model accuracy varies; META and QQQ have shown "
+                "above-baseline hit rates in backtests."
+            ),
+            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+            examples=["NVDA", "META", "QQQ"],
+        ),
+    ],
+) -> dict:
     """
     Get an AI/ML directional prediction for a stock's next-session move.
 
@@ -343,7 +406,19 @@ def get_ai_prediction(symbol: str) -> dict:
 # ── Tool 6 — equity curves ────────────────────────────────────────────────────
 
 @mcp.tool()
-def get_equity_curves(symbol: str) -> dict:
+def get_equity_curves(
+    symbol: Annotated[
+        str,
+        Field(
+            description=(
+                "Exchange ticker in uppercase, e.g. 'NVDA', 'AAPL', 'SPY'. "
+                "Do NOT pass company names — use official tickers only."
+            ),
+            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+            examples=["NVDA", "AAPL", "SPY"],
+        ),
+    ],
+) -> dict:
     """
     Retrieve backtested equity curves and performance metrics for standard
     quantitative strategies applied to a single stock.
@@ -381,7 +456,19 @@ def get_equity_curves(symbol: str) -> dict:
 # ── Tool 7 — stock research report ───────────────────────────────────────────
 
 @mcp.tool()
-def generate_stock_research_report(symbol: str) -> dict:
+def generate_stock_research_report(
+    symbol: Annotated[
+        str,
+        Field(
+            description=(
+                "Exchange ticker in uppercase, e.g. 'NVDA', 'TSLA', 'SPY'. "
+                "Do NOT pass company names — use official tickers only."
+            ),
+            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+            examples=["NVDA", "TSLA", "SPY"],
+        ),
+    ],
+) -> dict:
     """
     Generate a structured, institutional-style markdown research report for
     a single stock, covering all major quantitative signal sources.
@@ -432,7 +519,19 @@ def generate_stock_research_report(symbol: str) -> dict:
 # ── Tool 8 — stock chart images ───────────────────────────────────────────────
 
 @mcp.tool()
-def generate_stock_images(symbol: str) -> dict:
+def generate_stock_images(
+    symbol: Annotated[
+        str,
+        Field(
+            description=(
+                "Exchange ticker in uppercase, e.g. 'NVDA', 'AAPL'. "
+                "Do NOT pass company names — use official tickers only."
+            ),
+            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+            examples=["NVDA", "AAPL"],
+        ),
+    ],
+) -> dict:
     """
     Generate chart image URLs for a stock: price chart, IV surface, and
     options flow heatmap.
@@ -466,7 +565,19 @@ def generate_stock_images(symbol: str) -> dict:
 # ── Tool 9 — pre-trade risk scan ───────────────────────────────────────────────
 
 @mcp.tool()
-def get_pretrade_risk_scan(symbol: str) -> dict:
+def get_pretrade_risk_scan(
+    symbol: Annotated[
+        str,
+        Field(
+            description=(
+                "Exchange ticker in uppercase, e.g. 'NVDA', 'AAPL', 'SPY'. "
+                "Do NOT pass company names — use official tickers only."
+            ),
+            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+            examples=["NVDA", "AAPL", "SPY"],
+        ),
+    ],
+) -> dict:
     """
     Run a pre-trade risk scan for adding a single stock to the user's tracked
     portfolio, covering volatility/beta/VaR/drawdown deltas, market regime,
