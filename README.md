@@ -376,8 +376,8 @@ All 9 tools are reachable through the endpoints above. Access currently works as
 
 | Tier | Tools | Requirement |
 | --- | --- | --- |
-| Free (anonymous) | `analyze_stock`, `get_iv_radar`, `get_option_pressure`, `get_monte_carlo` | None |
-| Pro (signed-in) | `get_ai_prediction`, `get_equity_curves`, `generate_stock_research_report`, `get_pretrade_risk_scan` | API key |
+| Free (anonymous) | `analyze_stock`, `get_iv_radar`, `get_option_pressure`, `get_monte_carlo`, `get_ai_prediction`, `get_equity_curves` | None |
+| Pro (signed-in) | `generate_stock_research_report`, `get_pretrade_risk_scan` | API key |
 
 **In progress:** an x402 (HTTP micropayment) tier is under validation on Base Sepolia testnet. Once live, anonymous (non-signed-in) calls to `get_pretrade_risk_scan` and `generate_stock_research_report` will require a per-call USDC micropayment; signed-in access to these tools remains free. Draft reference pricing: `get_pretrade_risk_scan` $0.15, `generate_stock_research_report` $0.35 — subject to change pending testnet results. No other tools are in scope for this change at this time.
 
