@@ -26,7 +26,7 @@
     {
       "name": "get_pretrade_risk_scan",
       "description": "Use when you need a full pre-trade risk check before entering a position on a stock — flags liquidity risk, volatility risk, and near-term event risk in a single structured JSON report.",
-      "tier": "free"
+      "tier": "pro"
     },
     {
       "name": "get_ai_prediction",
