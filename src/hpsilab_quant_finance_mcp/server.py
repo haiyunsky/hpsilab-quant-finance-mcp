@@ -152,7 +152,7 @@ def _get_symbol_query_endpoint(endpoint: str, symbol: str) -> dict:
 
 # ── Tool 1 — comprehensive analysis ───────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(meta={"x-tier": "free"})
 def analyze_stock(
     symbol: Annotated[
         str,
@@ -208,7 +208,7 @@ def analyze_stock(
 
 # ── Tool 2 — IV radar ─────────────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(meta={"x-tier": "free"})
 def get_iv_radar(
     symbol: Annotated[
         str,
@@ -256,7 +256,7 @@ def get_iv_radar(
 
 # ── Tool 3 — option pressure ──────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(meta={"x-tier": "free"})
 def get_option_pressure(
     symbol: Annotated[
         str,
@@ -302,7 +302,7 @@ def get_option_pressure(
 
 # ── Tool 4 — Monte Carlo ──────────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(meta={"x-tier": "free"})
 def get_monte_carlo(
     symbol: Annotated[
         str,
@@ -352,7 +352,7 @@ def get_monte_carlo(
 
 # ── Tool 5 — AI prediction ────────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(meta={"x-tier": "free"})
 def get_ai_prediction(
     symbol: Annotated[
         str,
@@ -405,7 +405,7 @@ def get_ai_prediction(
 
 # ── Tool 6 — equity curves ────────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(meta={"x-tier": "free"})
 def get_equity_curves(
     symbol: Annotated[
         str,
@@ -455,7 +455,13 @@ def get_equity_curves(
 
 # ── Tool 7 — stock research report ───────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(meta={
+    "x-tier": "pro",
+    "x-access": {
+        "signed_in": "free",
+        "anonymous": {"payment": "x402", "amount_usdc": 0.35},
+    },
+})
 def generate_stock_research_report(
     symbol: Annotated[
         str,
@@ -518,7 +524,7 @@ def generate_stock_research_report(
 
 # ── Tool 8 — stock chart images ───────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(meta={"x-tier": "free"})
 def generate_stock_images(
     symbol: Annotated[
         str,
@@ -564,7 +570,13 @@ def generate_stock_images(
 
 # ── Tool 9 — pre-trade risk scan ───────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(meta={
+    "x-tier": "pro",
+    "x-access": {
+        "signed_in": "free",
+        "anonymous": {"payment": "x402", "amount_usdc": 0.15},
+    },
+})
 def get_pretrade_risk_scan(
     symbol: Annotated[
         str,

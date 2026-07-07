@@ -277,6 +277,8 @@ get_pretrade_risk_scan("NVDA")
 
 **Returns:** full JSON response from `GET /api/pretrade-risk-scan?symbol={symbol}`
 
+**Pricing status:** signed-in users call this tool free of charge. Anonymous calls are planned to require an x402 micropayment (draft reference: $0.15 USDC) once self-hosted x402 middleware validation on Base Sepolia testnet is complete. Not yet listed on MCPize pricing pending resolution of a metadata gap.
+
 ---
 
 ### `generate_stock_research_report`
@@ -286,6 +288,8 @@ Generates a structured markdown research note synthesizing all signal sources, s
 **Use when:** a user asks for a "report" or "write-up" and needs a formatted narrative rather than raw JSON.
 
 **Returns:** `report` (markdown string), `generated_at`
+
+**Pricing status:** signed-in users call this tool free of charge. Anonymous calls are planned to require an x402 micropayment (draft reference: $0.35 USDC) once self-hosted x402 middleware validation on Base Sepolia testnet is complete.
 
 ---
 
@@ -363,6 +367,19 @@ Quant Platform  (IV engine · ML models · Monte Carlo · Backtester)
 ## Supported MCP Clients
 
 Cursor · Claude Desktop · Claude Code · ChatGPT Agents · Cline · Roo Code · Windsurf · Continue · Any MCP-compatible client
+
+---
+
+## Pricing & Access Tiers
+
+All 9 tools are reachable through the endpoints above. Access currently works as follows:
+
+| Tier | Tools | Requirement |
+| --- | --- | --- |
+| Free (anonymous) | `analyze_stock`, `get_iv_radar`, `get_option_pressure`, `get_monte_carlo` | None |
+| Pro (signed-in) | `get_ai_prediction`, `get_equity_curves`, `generate_stock_research_report`, `get_pretrade_risk_scan` | API key |
+
+**In progress:** an x402 (HTTP micropayment) tier is under validation on Base Sepolia testnet. Once live, anonymous (non-signed-in) calls to `get_pretrade_risk_scan` and `generate_stock_research_report` will require a per-call USDC micropayment; signed-in access to these tools remains free. Draft reference pricing: `get_pretrade_risk_scan` $0.15, `generate_stock_research_report` $0.35 — subject to change pending testnet results. No other tools are in scope for this change at this time.
 
 ---
 
