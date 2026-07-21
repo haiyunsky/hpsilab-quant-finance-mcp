@@ -1,4 +1,6 @@
-# Quant Finance MCP Server for Stock Analysis and Options Analytics - HPSILab
+# HPSILab - Quant Finance MCP Server for Stock Analysis and Options Analytics
+
+<!-- mcp-name: io.github.haiyunsky/hpsilab-quant-finance-mcp -->
 
 [![Website](https://img.shields.io/badge/HPSILab-hpsilab.com-orange)](https://hpsilab.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -184,7 +186,33 @@ disagree, trust the SDK's source.
 }
 ```
 
-### Claude Desktop / Claude Code (via mcp-remote)
+### Claude Code (CLI or VS Code extension)
+
+Claude Code speaks Streamable HTTP natively — no proxy needed. Either run
+`claude mcp add` and follow its prompts (transport `http`, URL below), or add
+this block directly to your Claude config (global `~/.claude.json`, or a
+project-local `.mcp.json` if you want it scoped to one repo instead of every
+project):
+
+```json
+{
+  "mcpServers": {
+    "hpsilab": {
+      "type": "http",
+      "url": "https://api.hpsilab.com/mcp",
+      "headers": { "Authorization": "Bearer hpsi_your_key" }
+    }
+  }
+}
+```
+
+The `headers` field is optional — free-tier tools work anonymously without
+an API key (rate-limited, demo mode).
+
+### Claude Desktop (via mcp-remote)
+
+Claude Desktop needs the `mcp-remote` bridge for a remote HTTP server with
+custom headers:
 
 ```json
 {
@@ -211,6 +239,41 @@ disagree, trust the SDK's source.
       "command": "hpsilab-quant-finance-mcp"
     }
   }
+}
+```
+
+### VS Code (GitHub Copilot Chat)
+
+Requires the GitHub Copilot Chat extension. Once added, switch Copilot Chat
+to **Agent** mode — the 9 tools appear there.
+
+**One command** (documented VS Code CLI flag — adds to your user profile):
+
+```bash
+code --add-mcp "{\"name\":\"hpsilab\",\"type\":\"http\",\"url\":\"https://api.hpsilab.com/mcp\"}"
+```
+
+**Or browse for it in-editor**: Extensions view (`Ctrl+Shift+X`) → search
+`@mcp` → look for `hpsilab`. (Whether it appears there depends on gallery
+indexing outside our control — if it's not listed yet, use the command
+above or the manual config below, both work regardless.)
+
+**Or configure manually** — add to `.vscode/mcp.json` (workspace) or your
+user `mcp.json` (Command Palette → **MCP: Open User Configuration**):
+
+```json
+{
+  "servers": {
+    "hpsilab": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["hpsilab-quant-finance-mcp"],
+      "env": { "HPSILAB_API_KEY": "${input:hpsilab_api_key}" }
+    }
+  },
+  "inputs": [
+    { "id": "hpsilab_api_key", "type": "promptString", "description": "HPSILab API key", "password": true }
+  ]
 }
 ```
 

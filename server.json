@@ -1,52 +1,47 @@
 {
-  "name": "hpsilab-quant-finance-mcp",
-  "version": "0.5.0",
-  "description": "9-tool quant finance MCP server for stock analysis, options analytics, implied volatility radar, Monte Carlo stock simulation, AI prediction signals, pre-trade risk scanning, backtesting, research reports, and chart visualization.",
-  "tools": [
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.haiyunsky/hpsilab-quant-finance-mcp",
+  "title": "HPSILab Quant Finance",
+  "description": "Quant finance tools: stock analysis, options IV, Monte Carlo, AI prediction, risk scan, backtests.",
+  "repository": {
+    "url": "https://github.com/haiyunsky/hpsilab-quant-finance-mcp",
+    "source": "github"
+  },
+  "version": "0.5.1",
+  "websiteUrl": "https://hpsilab.com",
+  "packages": [
     {
-      "name": "analyze_stock",
-      "description": "Use when you need one aggregated JSON snapshot of a stock's full quant profile — combines price data, IV radar, option pressure, Monte Carlo simulation, and AI prediction signals in a single call instead of calling each tool separately.",
-      "tier": "free"
-    },
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "hpsilab-quant-finance-mcp",
+      "version": "0.5.1",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "HPSILAB_API_KEY",
+          "description": "HPSILab API key (hpsi_...) from hpsilab.com settings",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ],
+  "remotes": [
     {
-      "name": "get_iv_radar",
-      "description": "Use when you need to understand a stock's implied-volatility structure — how expensive its options are right now relative to history, and whether IV is elevated, depressed, or fairly priced.",
-      "tier": "free"
-    },
-    {
-      "name": "get_option_pressure",
-      "description": "Use when you need the option-chain pressure map for the nearest weekly or monthly expiry — Max Pain level, dealer positioning, and where large open-interest concentrations sit relative to the current price.",
-      "tier": "free"
-    },
-    {
-      "name": "get_monte_carlo",
-      "description": "Use when you need a probabilistic price forecast for a stock over roughly the next 10 trading days — runs thousands of randomized simulated paths and returns a distribution of likely outcomes rather than a single point estimate.",
-      "tier": "free"
-    },
-    {
-      "name": "get_pretrade_risk_scan",
-      "description": "Use when you need a full pre-trade risk check before entering a position on a stock — flags liquidity risk, volatility risk, and near-term event risk in a single structured JSON report.",
-      "tier": "pro"
-    },
-    {
-      "name": "get_ai_prediction",
-      "description": "Use when you need a next-day directional signal for a stock — returns the model's probability that the stock closes up, plus a plain-language buy, watch, or sell read on current conditions.",
-      "tier": "free"
-    },
-    {
-      "name": "get_equity_curves",
-      "description": "Use when you need to see how the quant strategy would have performed historically across your watchlist — returns backtested equity curves along with Sharpe ratio and other risk-adjusted performance metrics.",
-      "tier": "free"
-    },
-    {
-      "name": "generate_stock_research_report",
-      "description": "Use when you need a complete, shareable research report for a stock — produces a full markdown writeup paired with five stock-report charts covering price, volatility, options, and prediction signals.",
-      "tier": "pro"
-    },
-    {
-      "name": "generate_stock_images",
-      "description": "Use when you need standalone visual charts for a stock report rather than a full written report — generates the underlying stock-report PNG images and returns their URLs for embedding elsewhere.",
-      "tier": "pro"
+      "type": "streamable-http",
+      "url": "https://api.hpsilab.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer hpsi_... API key. Optional: free-tier tools work anonymously (rate-limited demo mode).",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
     }
   ]
 }

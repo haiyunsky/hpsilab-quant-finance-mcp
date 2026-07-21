@@ -9,3 +9,4 @@ uv.lock
 .env
 .env.*
 test.py
+mcp-publisher.exe
