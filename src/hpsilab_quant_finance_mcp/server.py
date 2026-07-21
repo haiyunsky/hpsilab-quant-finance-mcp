@@ -9,25 +9,44 @@ Set the HPSILAB_API_KEY environment variable to a valid HPSILab API key
 (format: hpsi_...).  This server registers the full 9-tool surface; the
 hosted API may enforce account-level quotas, rate limits, and symbol coverage.
 
-Remote endpoint: https://hpsilab.com/mcp
+Remote endpoint: https://api.hpsilab.com/mcp
+
+Transport
+---------
+This package calls the hosted REST API through the `hpsilab-mcp` SDK
+(https://pypi.org/project/hpsilab-mcp/), which is the single source of truth
+for endpoint paths/methods. Keep this file's tool surface in sync with the
+SDK's `HpsiMcpClient` rather than re-deriving REST paths here.
 """
 
 import os
 import re
 from typing import Annotated, Any
 
-import requests
 from dotenv import load_dotenv
+from hpsilab_mcp import (
+    HpsiMcpAuthError,
+    HpsiMcpClient,
+    HpsiMcpConnectionError,
+    HpsiMcpPaymentError,
+    HpsiMcpRateLimitError,
+    HpsiMcpResponseError,
+    HpsiMcpTimeoutError,
+)
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
-BASE_URL = "https://hpsilab.com/api"
-TIMEOUT = 30
 DISCLAIMER = (
     "Research and educational output only. This is not investment advice, "
     "financial advice, or a recommendation to buy or sell any security."
 )
 SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9.-]{0,15}$")
+
+READ_ONLY_ANNOTATIONS = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "openWorldHint": True,
+}
 
 mcp = FastMCP("Quant Finance MCP Server for Stock Analysis and Options Analytics - HPSILab")
 
@@ -75,97 +94,57 @@ def _normalize_symbol(symbol: str) -> str:
     return normalized
 
 
-def _message_from_response(response: requests.Response) -> str:
+def _call(method_name: str, symbol: str, **kwargs: Any) -> dict:
+    """Validate `symbol`, call the named HpsiMcpClient method, and normalize the
+    outcome into this server's `_error()`/raw-dict response contract."""
     try:
-        payload = response.json()
-    except ValueError:
-        return response.text[:500] or response.reason
+        normalized_symbol = _normalize_symbol(symbol)
+    except ValueError as exc:
+        return _error("invalid_symbol", str(exc))
 
-    if isinstance(payload, dict):
-        for key in ("message", "error", "detail"):
-            value = payload.get(key)
-            if isinstance(value, str) and value:
-                return value
-        return str(payload)
-
-    return str(payload)
-
-
-def _get(path: str, *, symbol: str | None = None, params: dict | None = None) -> dict:
-    """Make an authenticated GET request to the HPSILab API."""
     api_key = _get_api_key()
     if not api_key:
         return _error(
             "missing_api_key",
             "Set HPSILAB_API_KEY to a valid HPSILab API key before calling this tool.",
-            symbol=symbol,
+            symbol=normalized_symbol,
         )
 
     try:
-        response = requests.get(
-            f"{BASE_URL}/{path}",
-            headers={"Authorization": f"Bearer {api_key}"},
-            params=params or {},
-            timeout=TIMEOUT,
-        )
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as exc:
-        response = exc.response
-        status_code = response.status_code if response is not None else None
-        message = _message_from_response(response) if response is not None else str(exc)
-        return _error(
-            "http_error",
-            message,
-            status_code=status_code,
-            symbol=symbol,
-        )
-    except requests.exceptions.Timeout:
-        return _error(
-            "request_timeout",
-            f"HPSILab API request timed out after {TIMEOUT} seconds.",
-            symbol=symbol,
-        )
-    except requests.exceptions.RequestException as exc:
-        return _error("request_failed", str(exc), symbol=symbol)
-    except ValueError as exc:
-        return _error("invalid_json", f"HPSILab API returned invalid JSON: {exc}", symbol=symbol)
+        with HpsiMcpClient(api_key=api_key) as client:
+            method = getattr(client, method_name)
+            return method(normalized_symbol, **kwargs)
+    except HpsiMcpPaymentError as exc:
+        return _error("payment_required", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
+    except HpsiMcpRateLimitError as exc:
+        return _error("rate_limited", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
+    except HpsiMcpAuthError as exc:
+        return _error("http_error", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
+    except HpsiMcpTimeoutError as exc:
+        return _error("request_timeout", str(exc), symbol=normalized_symbol)
+    except HpsiMcpConnectionError as exc:
+        return _error("request_failed", str(exc), symbol=normalized_symbol)
+    except HpsiMcpResponseError as exc:
+        return _error("invalid_json", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
+    except Exception as exc:  # HpsiMcpAPIError and anything else from the SDK
+        status_code = getattr(exc, "status_code", None)
+        return _error("http_error", str(exc), status_code=status_code, symbol=normalized_symbol)
 
 
-def _get_symbol_endpoint(endpoint: str, symbol: str) -> dict:
-    try:
-        normalized_symbol = _normalize_symbol(symbol)
-    except ValueError as exc:
-        return _error("invalid_symbol", str(exc))
-
-    return _get(f"{endpoint}/{normalized_symbol}", symbol=normalized_symbol)
-
-
-def _get_symbol_query_endpoint(endpoint: str, symbol: str) -> dict:
-    try:
-        normalized_symbol = _normalize_symbol(symbol)
-    except ValueError as exc:
-        return _error("invalid_symbol", str(exc))
-
-    return _get(endpoint, symbol=normalized_symbol, params={"symbol": normalized_symbol})
+_TICKER_FIELD = Field(
+    description=(
+        "Exchange ticker in uppercase, e.g. 'NVDA', 'AAPL', 'SPY', 'QQQ'. "
+        "Do NOT pass company names ('Nvidia') — use official tickers only."
+    ),
+    pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
+    examples=["NVDA", "AAPL", "SPY", "QQQ"],
+)
 
 
 # ── Tool 1 — comprehensive analysis ───────────────────────────────────────────
 
-@mcp.tool(meta={"x-tier": "free"})
-def analyze_stock(
-    symbol: Annotated[
-        str,
-        Field(
-            description=(
-                "Exchange ticker in uppercase, e.g. 'NVDA', 'AAPL', 'SPY', 'QQQ'. "
-                "Do NOT pass company names ('Nvidia') — use official tickers only."
-            ),
-            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
-            examples=["NVDA", "AAPL", "SPY", "QQQ"],
-        ),
-    ],
-) -> dict:
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+def analyze_stock(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
     """
     Run a full institutional-grade quantitative analysis for a single stock.
 
@@ -180,12 +159,6 @@ def analyze_stock(
 
     Prefer the dedicated sub-tools (get_iv_radar, get_monte_carlo, etc.) when
     you need only a specific data dimension, to reduce latency and token usage.
-
-    Parameters
-    ----------
-    symbol : str
-        Exchange ticker in uppercase, e.g. "NVDA", "AAPL", "SPY", "QQQ".
-        Do NOT pass company names ("Nvidia") — use official tickers only.
 
     Returns
     -------
@@ -203,25 +176,13 @@ def analyze_stock(
     - API access, quota, and ticker coverage are governed by the HPSILab account.
     - Response latency is ~5–15 s due to multi-model aggregation.
     """
-    return _get_symbol_endpoint("analyze_stock", symbol)
+    return _call("analyze_stock", symbol)
 
 
 # ── Tool 2 — IV radar ─────────────────────────────────────────────────────────
 
-@mcp.tool(meta={"x-tier": "free"})
-def get_iv_radar(
-    symbol: Annotated[
-        str,
-        Field(
-            description=(
-                "Exchange ticker in uppercase, e.g. 'TSLA', 'NVDA', 'IWM'. "
-                "Do NOT pass company names — use official tickers only."
-            ),
-            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
-            examples=["TSLA", "NVDA", "IWM"],
-        ),
-    ],
-) -> dict:
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+def get_iv_radar(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
     """
     Retrieve implied-volatility (IV) metrics for a single stock.
 
@@ -236,11 +197,6 @@ def get_iv_radar(
     Do NOT use this tool if you already called analyze_stock — the IV data is
     included in that response.
 
-    Parameters
-    ----------
-    symbol : str
-        Exchange ticker in uppercase, e.g. "TSLA", "NVDA", "IWM".
-
     Returns
     -------
     dict with keys:
@@ -251,25 +207,13 @@ def get_iv_radar(
         risk_reversal   : float — 25-delta risk reversal (positive = call-skew)
         volatility_regime: str  — "Low" | "Normal" | "Elevated" | "Extreme"
     """
-    return _get_symbol_endpoint("iv_radar", symbol)
+    return _call("get_iv_radar", symbol)
 
 
 # ── Tool 3 — option pressure ──────────────────────────────────────────────────
 
-@mcp.tool(meta={"x-tier": "free"})
-def get_option_pressure(
-    symbol: Annotated[
-        str,
-        Field(
-            description=(
-                "Exchange ticker in uppercase, e.g. 'AAPL', 'SPY', 'NVDA'. "
-                "Do NOT pass company names — use official tickers only."
-            ),
-            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
-            examples=["AAPL", "SPY", "NVDA"],
-        ),
-    ],
-) -> dict:
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+def get_option_pressure(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
     """
     Retrieve options-market positioning and dealer-hedging pressure zones.
 
@@ -280,11 +224,6 @@ def get_option_pressure(
       that act as price magnets or resistance/support levels.
     - You want the expected-move range implied by the options market for the
       current weekly/monthly expiry cycle.
-
-    Parameters
-    ----------
-    symbol : str
-        Exchange ticker in uppercase, e.g. "AAPL", "SPY", "NVDA".
 
     Returns
     -------
@@ -297,25 +236,13 @@ def get_option_pressure(
         expiry_date   : str   — target expiry date (YYYY-MM-DD)
         pressure_zones: list  — list of significant strike/OI concentration dicts
     """
-    return _get_symbol_endpoint("option_pressure", symbol)
+    return _call("get_option_pressure", symbol)
 
 
 # ── Tool 4 — Monte Carlo ──────────────────────────────────────────────────────
 
-@mcp.tool(meta={"x-tier": "free"})
-def get_monte_carlo(
-    symbol: Annotated[
-        str,
-        Field(
-            description=(
-                "Exchange ticker in uppercase, e.g. 'MSFT', 'NVDA', 'SPY'. "
-                "Do NOT pass company names — use official tickers only."
-            ),
-            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
-            examples=["MSFT", "NVDA", "SPY"],
-        ),
-    ],
-) -> dict:
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+def get_monte_carlo(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
     """
     Run a Monte Carlo price-path simulation for a stock over a 30-day horizon.
 
@@ -327,11 +254,6 @@ def get_monte_carlo(
     The simulation uses a GBM (Geometric Brownian Motion) model calibrated with
     the stock's realized volatility and current IV.  10,000 paths are run by
     default.
-
-    Parameters
-    ----------
-    symbol : str
-        Exchange ticker in uppercase, e.g. "MSFT", "NVDA", "SPY".
 
     Returns
     -------
@@ -347,12 +269,12 @@ def get_monte_carlo(
                                  {"bins": list, "frequencies": list,
                                   "kde_x": list, "kde_y": list}
     """
-    return _get_symbol_endpoint("monte_carlo", symbol)
+    return _call("get_monte_carlo", symbol)
 
 
 # ── Tool 5 — AI prediction ────────────────────────────────────────────────────
 
-@mcp.tool(meta={"x-tier": "free"})
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
 def get_ai_prediction(
     symbol: Annotated[
         str,
@@ -382,13 +304,6 @@ def get_ai_prediction(
     and a VQC (quantum-classical hybrid) model.  Features include VIX, relative
     strength, Treasury rates, and options flow signals.
 
-    Parameters
-    ----------
-    symbol : str
-        Exchange ticker in uppercase, e.g. "NVDA", "META", "QQQ".
-        Per-ticker model accuracy varies; META and QQQ have shown above-
-        baseline hit rates in backtests.
-
     Returns
     -------
     dict with keys:
@@ -400,25 +315,13 @@ def get_ai_prediction(
         regime          : str   — "Bull" | "Bear" | "Chop" market regime
         signal_strength : str   — "Strong" | "Moderate" | "Weak"
     """
-    return _get_symbol_endpoint("ai_prediction", symbol)
+    return _call("get_ai_prediction", symbol)
 
 
 # ── Tool 6 — equity curves ────────────────────────────────────────────────────
 
-@mcp.tool(meta={"x-tier": "free"})
-def get_equity_curves(
-    symbol: Annotated[
-        str,
-        Field(
-            description=(
-                "Exchange ticker in uppercase, e.g. 'NVDA', 'AAPL', 'SPY'. "
-                "Do NOT pass company names — use official tickers only."
-            ),
-            pattern=r"^[A-Z][A-Z0-9.-]{0,15}$",
-            examples=["NVDA", "AAPL", "SPY"],
-        ),
-    ],
-) -> dict:
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+def get_equity_curves(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
     """
     Retrieve backtested equity curves and performance metrics for standard
     quantitative strategies applied to a single stock.
@@ -430,11 +333,6 @@ def get_equity_curves(
       to compare strategy quality.
     - You are building a multi-leg options strategy and want historical
       context for the underlying's trending vs. mean-reverting behavior.
-
-    Parameters
-    ----------
-    symbol : str
-        Exchange ticker in uppercase, e.g. "NVDA", "AAPL", "SPY".
 
     Returns
     -------
@@ -450,18 +348,21 @@ def get_equity_curves(
             pl_ratio      : float — average win / average loss
             equity_curve  : list  — daily portfolio value series
     """
-    return _get_symbol_endpoint("equity_curves", symbol)
+    return _call("get_equity_curves", symbol)
 
 
 # ── Tool 7 — stock research report ───────────────────────────────────────────
 
-@mcp.tool(meta={
-    "x-tier": "pro",
-    "x-access": {
-        "signed_in": "free",
-        "anonymous": {"payment": "x402", "amount_usdc": 0.35},
+@mcp.tool(
+    annotations=READ_ONLY_ANNOTATIONS,
+    meta={
+        "x-tier": "pro",
+        "x-access": {
+            "signed_in": "free",
+            "anonymous": {"payment": "x402", "amount_usdc": 0.35},
+        },
     },
-})
+)
 def generate_stock_research_report(
     symbol: Annotated[
         str,
@@ -500,12 +401,6 @@ def generate_stock_research_report(
     - You need a specific data dimension (IV, Monte Carlo, etc.) → use the
       dedicated sub-tool (get_iv_radar, get_monte_carlo, etc.) for lower latency.
 
-    Parameters
-    ----------
-    symbol : str
-        Exchange ticker in uppercase, e.g. "NVDA", "TSLA", "SPY".
-        Do NOT pass company names — use official tickers only.
-
     Returns
     -------
     dict with keys:
@@ -519,12 +414,12 @@ def generate_stock_research_report(
     - API access, quota, and ticker coverage are governed by the HPSILab account.
     - For programmatic use, prefer analyze_stock which returns structured JSON.
     """
-    return _get_symbol_endpoint("stock_research_report", symbol)
+    return _call("generate_stock_research_report", symbol)
 
 
 # ── Tool 8 — stock chart images ───────────────────────────────────────────────
 
-@mcp.tool(meta={"x-tier": "free"})
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
 def generate_stock_images(
     symbol: Annotated[
         str,
@@ -551,11 +446,6 @@ def generate_stock_images(
     If images do not render in your client, copy the URL and open it in a
     browser directly.
 
-    Parameters
-    ----------
-    symbol : str
-        Exchange ticker in uppercase, e.g. "NVDA", "AAPL".
-
     Returns
     -------
     dict with keys:
@@ -565,18 +455,21 @@ def generate_stock_images(
         options_flow_url: str — URL to options flow heatmap (PNG)
         expires_at      : str — ISO 8601 expiry timestamp for the URLs
     """
-    return _get_symbol_endpoint("stock_images", symbol)
+    return _call("generate_stock_images", symbol)
 
 
 # ── Tool 9 — pre-trade risk scan ───────────────────────────────────────────────
 
-@mcp.tool(meta={
-    "x-tier": "pro",
-    "x-access": {
-        "signed_in": "free",
-        "anonymous": {"payment": "x402", "amount_usdc": 0.15},
+@mcp.tool(
+    annotations=READ_ONLY_ANNOTATIONS,
+    meta={
+        "x-tier": "pro",
+        "x-access": {
+            "signed_in": "free",
+            "anonymous": {"payment": "x402", "amount_usdc": 0.15},
+        },
     },
-})
+)
 def get_pretrade_risk_scan(
     symbol: Annotated[
         str,
@@ -609,11 +502,6 @@ def get_pretrade_risk_scan(
     - A standalone price-distribution simulation with no portfolio context →
       use get_monte_carlo instead.
     - A general bullish/bearish read on the stock → use analyze_stock.
-
-    Parameters
-    ----------
-    symbol : str
-        Exchange ticker in uppercase, e.g. "NVDA", "AAPL", "SPY".
 
     Example
     -------
@@ -691,7 +579,7 @@ def get_pretrade_risk_scan(
       suggest adding symbols to their watchlist) rather than treating the
       missing data as an error.
     """
-    return _get_symbol_query_endpoint("pretrade-risk-scan", symbol)
+    return _call("get_pretrade_risk_scan", symbol)
 
 
 # ── entry point ────────────────────────────────────────────────────────────────

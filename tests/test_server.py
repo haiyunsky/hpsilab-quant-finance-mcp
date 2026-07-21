@@ -7,22 +7,46 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from hpsilab_mcp import HpsiMcpAuthError
 from hpsilab_quant_finance_mcp import server
 
 
-class FakeResponse:
-    def __init__(self, payload, status_code=200, reason="OK"):
-        self._payload = payload
-        self.status_code = status_code
-        self.reason = reason
-        self.text = str(payload)
+class FakeClient:
+    """Stand-in for HpsiMcpClient: records the api_key it was built with and
+    lets a test control what a named method returns or raises."""
 
-    def json(self):
-        return self._payload
+    last_instance = None
 
-    def raise_for_status(self):
-        if self.status_code >= 400:
-            raise server.requests.exceptions.HTTPError(response=self)
+    def __init__(self, api_key=None, **kwargs):
+        self.api_key = api_key
+        self.calls = []
+        FakeClient.last_instance = self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def _record(self, name, symbol, **kwargs):
+        self.calls.append((name, symbol, kwargs))
+
+
+def make_fake_client(method_name, result=None, exception=None):
+    class _Client(FakeClient):
+        def __getattr__(self, name):
+            if name != method_name:
+                raise AttributeError(name)
+
+            def _method(symbol, **kwargs):
+                self._record(name, symbol, **kwargs)
+                if exception is not None:
+                    raise exception
+                return result
+
+            return _method
+
+    return _Client
 
 
 class ServerTests(unittest.TestCase):
@@ -45,54 +69,41 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(result["symbol"], "NVDA")
         self.assertIn("HPSILAB_API_KEY", result["message"])
 
-    def test_get_uses_normalized_symbol_and_authorization_header(self):
+    def test_analyze_stock_uses_normalized_symbol_and_api_key(self):
         response_payload = {"symbol": "NVDA", "signal": "Neutral"}
+        fake_cls = make_fake_client("analyze_stock", result=response_payload)
 
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
-            with mock.patch.object(
-                server.requests,
-                "get",
-                return_value=FakeResponse(response_payload),
-            ) as request_get:
+            with mock.patch.object(server, "HpsiMcpClient", fake_cls):
                 result = server.analyze_stock("nvda")
 
         self.assertEqual(result, response_payload)
-        request_get.assert_called_once()
-        args, kwargs = request_get.call_args
-        self.assertEqual(args[0], "https://hpsilab.com/api/analyze_stock/NVDA")
-        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test_api_key")
-        self.assertEqual(kwargs["timeout"], server.TIMEOUT)
+        self.assertEqual(FakeClient.last_instance.api_key, "test_api_key")
+        self.assertEqual(FakeClient.last_instance.calls, [("analyze_stock", "NVDA", {})])
 
-    def test_pretrade_risk_scan_uses_symbol_query_parameter(self):
+    def test_pretrade_risk_scan_uses_normalized_symbol(self):
         response_payload = {
             "symbol": "NVDA",
             "risk_level": "moderate",
             "checks": [{"name": "liquidity", "status": "pass"}],
         }
+        fake_cls = make_fake_client("get_pretrade_risk_scan", result=response_payload)
 
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
-            with mock.patch.object(
-                server.requests,
-                "get",
-                return_value=FakeResponse(response_payload),
-            ) as request_get:
+            with mock.patch.object(server, "HpsiMcpClient", fake_cls):
                 result = server.get_pretrade_risk_scan("nvda")
 
         self.assertEqual(result, response_payload)
-        request_get.assert_called_once()
-        args, kwargs = request_get.call_args
-        self.assertEqual(args[0], "https://hpsilab.com/api/pretrade-risk-scan")
-        self.assertEqual(kwargs["params"], {"symbol": "NVDA"})
-        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test_api_key")
-        self.assertEqual(kwargs["timeout"], server.TIMEOUT)
+        self.assertEqual(FakeClient.last_instance.calls, [("get_pretrade_risk_scan", "NVDA", {})])
 
     def test_http_error_returns_structured_payload(self):
+        fake_cls = make_fake_client(
+            "get_iv_radar",
+            exception=HpsiMcpAuthError("quota exceeded", status_code=403),
+        )
+
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
-            with mock.patch.object(
-                server.requests,
-                "get",
-                return_value=FakeResponse({"message": "quota exceeded"}, status_code=403),
-            ):
+            with mock.patch.object(server, "HpsiMcpClient", fake_cls):
                 result = server.get_iv_radar("SPY")
 
         self.assertEqual(result["status"], "error")

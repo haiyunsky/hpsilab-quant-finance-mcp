@@ -3,7 +3,8 @@
 [![Website](https://img.shields.io/badge/HPSILab-hpsilab.com-orange)](https://hpsilab.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io)
-[![PyPI](https://img.shields.io/pypi/v/hpsilab-mcp?label=PyPI)](https://pypi.org/project/hpsilab-mcp/)
+[![PyPI](https://img.shields.io/pypi/v/hpsilab-quant-finance-mcp?label=PyPI)](https://pypi.org/project/hpsilab-quant-finance-mcp/)
+[![PyPI SDK](https://img.shields.io/pypi/v/hpsilab-mcp?label=PyPI%20SDK)](https://pypi.org/project/hpsilab-mcp/)
 [![Glama](https://glama.ai/mcp/servers/haiyunsky/hpsilab-quant-finance-mcp/badge)](https://glama.ai/mcp/servers/haiyunsky/hpsilab-quant-finance-mcp)
 [![Smithery](https://smithery.ai/badge/g-scorpiosky/hpsilab-quantum-finance)](https://smithery.ai/servers/g-scorpiosky/hpsilab-quantum-finance)
 
@@ -18,7 +19,7 @@ Best fit: active investors, options researchers, quant developers, financial res
 **Official Remote MCP Endpoint**
 
 ```text
-https://hpsilab.com/mcp
+https://api.hpsilab.com/mcp
 ```
 
 ---
@@ -33,7 +34,7 @@ Create an account at [hpsilab.com](https://hpsilab.com) and generate an API key 
 
 | Option | Setup Time | Best For |
 | --- | --- | --- |
-| Remote MCP (`https://hpsilab.com/mcp`) | Instant | Most users |
+| Remote MCP (`https://api.hpsilab.com/mcp`) | Instant | Most users |
 | Python REST SDK (`pip install hpsilab-mcp`) | Instant | Python developers |
 | Self-Hosted MCP Server | 2–3 minutes | Self-hosted setups |
 | Enterprise Deployment | Custom | Organizations |
@@ -43,15 +44,25 @@ Create an account at [hpsilab.com](https://hpsilab.com) and generate an API key 
 Connect directly to the official HPSILab MCP endpoint — no installation required, always up to date.
 
 ```text
-https://hpsilab.com/mcp
+https://api.hpsilab.com/mcp
 ```
 
 ### Option 2 — Open Source Self-Hosted MCP Server
 
 ```bash
+pip install hpsilab-quant-finance-mcp
+export HPSILAB_API_KEY=hpsi_your_key   # Windows: set HPSILAB_API_KEY=hpsi_your_key
+hpsilab-quant-finance-mcp
+```
+
+Published on PyPI: https://pypi.org/project/hpsilab-quant-finance-mcp/
+
+To modify the source instead of installing the release, clone and install in editable mode:
+
+```bash
 git clone https://github.com/haiyunsky/hpsilab-quant-finance-mcp.git
 cd hpsilab-quant-finance-mcp
-pip install .
+pip install -e .
 cp env.example .env
 # edit .env and set HPSILAB_API_KEY=hpsi_your_key
 hpsilab-quant-finance-mcp
@@ -120,17 +131,23 @@ client.generate_stock_research_report("NVDA")
 
 ### REST Endpoint Mapping
 
+The MCP server does not call these endpoints directly — it delegates every
+call to the `hpsilab-mcp` SDK's `HpsiMcpClient`, which is the single source
+of truth for paths/methods. This table documents what the SDK currently
+calls; if it and [Available SDK Methods](#available-sdk-methods) above ever
+disagree, trust the SDK's source.
+
 | Method | Endpoint |
 | --- | --- |
 | `analyze_stock(symbol)` | `GET /api/analyze_stock/{symbol}` |
 | `get_ai_prediction(symbol)` | `GET /api/ai_prediction/{symbol}` |
-| `get_iv_radar(symbol)` | `GET /api/iv_radar/{symbol}` |
+| `get_iv_radar(symbol)` | `GET /api/iv_batch?symbols={symbol}` |
 | `get_option_pressure(symbol)` | `GET /api/option_pressure/{symbol}` |
 | `get_monte_carlo(symbol)` | `GET /api/monte_carlo/{symbol}` |
-| `get_equity_curves(symbol)` | `GET /api/equity_curves/{symbol}` |
+| `get_equity_curves(symbol)` | `GET /api/equity_curve/{symbol}` |
 | `get_pretrade_risk_scan(symbol)` | `GET /api/pretrade-risk-scan?symbol={symbol}` |
-| `generate_stock_images(symbol)` | `GET /api/stock_images/{symbol}` |
-| `generate_stock_research_report(symbol)` | `GET /api/stock_research_report/{symbol}` |
+| `generate_stock_images(symbol)` | `POST /api/stock_report/{symbol}/images` |
+| `generate_stock_research_report(symbol)` | `POST /api/stock_report/{symbol}/research_report` |
 
 ### Capability Matrix
 
@@ -158,7 +175,7 @@ client.generate_stock_research_report("NVDA")
 {
   "mcpServers": {
     "hpsilab": {
-      "url": "https://hpsilab.com/mcp",
+      "url": "https://api.hpsilab.com/mcp",
       "headers": {
         "Authorization": "Bearer hpsi_your_key"
       }
@@ -176,7 +193,7 @@ client.generate_stock_research_report("NVDA")
       "command": "npx",
       "args": [
         "mcp-remote",
-        "https://hpsilab.com/mcp",
+        "https://api.hpsilab.com/mcp",
         "--header",
         "Authorization: Bearer hpsi_your_key"
       ]
