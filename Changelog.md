@@ -1,3 +1,6 @@
+v0.5.2
+- Added package-level __version__ attribute (reads installed metadata, matching the hpsilab-mcp SDK convention)
+
 v0.5.1
 - Added mcp-name ownership marker to README for MCP Registry verification
 - Replaced custom server.json with official MCP Registry schema (packages + remotes)
