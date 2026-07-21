@@ -247,10 +247,18 @@ custom headers:
 Requires the GitHub Copilot Chat extension. Once added, switch Copilot Chat
 to **Agent** mode — the 9 tools appear there.
 
-**One command** (documented VS Code CLI flag — adds to your user profile):
+**One command** (documented VS Code CLI flag — adds to your user profile).
+
+macOS / Linux / Git Bash:
 
 ```bash
 code --add-mcp "{\"name\":\"hpsilab\",\"type\":\"http\",\"url\":\"https://api.hpsilab.com/mcp\"}"
+```
+
+Windows PowerShell (quotes must be escaped as `\"` inside single quotes):
+
+```powershell
+code --add-mcp '{\"name\":\"hpsilab\",\"type\":\"http\",\"url\":\"https://api.hpsilab.com/mcp\"}'
 ```
 
 **Or browse for it in-editor**: Extensions view (`Ctrl+Shift+X`) → search
