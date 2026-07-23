@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "hpsilab": {
-      "url": "https://api.hpsilab.com/mcp",
+      "url": "https://hpsilab.com/mcp",
       "headers": {
         "Authorization": "Bearer hpsi_your_key"
       }

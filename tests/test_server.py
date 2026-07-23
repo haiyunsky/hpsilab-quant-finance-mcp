@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 import unittest
@@ -50,6 +51,43 @@ def make_fake_client(method_name, result=None, exception=None):
 
 
 class ServerTests(unittest.TestCase):
+    def test_all_tools_expose_explicit_boolean_annotations(self):
+        tools = asyncio.run(server.mcp.list_tools())
+        required_hints = (
+            "readOnlyHint",
+            "destructiveHint",
+            "idempotentHint",
+            "openWorldHint",
+        )
+
+        self.assertEqual(len(tools), 9)
+        for tool in tools:
+            self.assertIsNotNone(tool.annotations, tool.name)
+            for hint in required_hints:
+                value = getattr(tool.annotations, hint)
+                self.assertIs(type(value), bool, f"{tool.name}.{hint}={value!r}")
+
+    def test_artifact_generators_are_non_destructive_creates(self):
+        tools = {tool.name: tool for tool in asyncio.run(server.mcp.list_tools())}
+        for name in ("generate_stock_images", "generate_stock_research_report"):
+            annotations = tools[name].annotations
+            self.assertFalse(annotations.readOnlyHint, name)
+            self.assertFalse(annotations.destructiveHint, name)
+            self.assertFalse(annotations.idempotentHint, name)
+            self.assertTrue(annotations.openWorldHint, name)
+
+    def test_analysis_tools_are_read_only_idempotent_and_open_world(self):
+        tools = {tool.name: tool for tool in asyncio.run(server.mcp.list_tools())}
+
+        for name, tool in tools.items():
+            if name in {"generate_stock_images", "generate_stock_research_report"}:
+                continue
+            annotations = tool.annotations
+            self.assertTrue(annotations.readOnlyHint, name)
+            self.assertFalse(annotations.destructiveHint, name)
+            self.assertTrue(annotations.idempotentHint, name)
+            self.assertTrue(annotations.openWorldHint, name)
+
     def test_normalize_symbol(self):
         self.assertEqual(server._normalize_symbol(" brk.b "), "BRK.B")
         self.assertEqual(server._normalize_symbol("spy"), "SPY")

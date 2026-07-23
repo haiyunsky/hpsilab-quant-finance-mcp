@@ -45,6 +45,17 @@ SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9.-]{0,15}$")
 READ_ONLY_ANNOTATIONS = {
     "readOnlyHint": True,
     "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": True,
+}
+
+# These tools create externally hosted chart/report artifacts and can consume
+# metered quota. They do not overwrite or delete existing resources, but
+# repeated calls can create or charge again and therefore are not idempotent.
+CREATE_EXTERNAL_ARTIFACT_ANNOTATIONS = {
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
     "openWorldHint": True,
 }
 
@@ -354,7 +365,7 @@ def get_equity_curves(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
 # ── Tool 7 — stock research report ───────────────────────────────────────────
 
 @mcp.tool(
-    annotations=READ_ONLY_ANNOTATIONS,
+    annotations=CREATE_EXTERNAL_ARTIFACT_ANNOTATIONS,
     meta={
         "x-tier": "pro",
         "x-access": {
@@ -419,7 +430,10 @@ def generate_stock_research_report(
 
 # ── Tool 8 — stock chart images ───────────────────────────────────────────────
 
-@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+@mcp.tool(
+    annotations=CREATE_EXTERNAL_ARTIFACT_ANNOTATIONS,
+    meta={"x-tier": "free"},
+)
 def generate_stock_images(
     symbol: Annotated[
         str,

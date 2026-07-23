@@ -9,6 +9,7 @@
 [![PyPI SDK](https://img.shields.io/pypi/v/hpsilab-mcp?label=PyPI%20SDK)](https://pypi.org/project/hpsilab-mcp/)
 [![Glama](https://glama.ai/mcp/servers/haiyunsky/hpsilab-quant-finance-mcp/badge)](https://glama.ai/mcp/servers/haiyunsky/hpsilab-quant-finance-mcp)
 [![Smithery](https://smithery.ai/badge/g-scorpiosky/hpsilab-quantum-finance)](https://smithery.ai/servers/g-scorpiosky/hpsilab-quantum-finance)
+[![MCPize](https://mcpize.com/badge/@haiyunsky/hpsilab-quant-finance)](https://mcpize.com/mcp/hpsilab-quant-finance)
 
 If this quant finance MCP server is useful, please star the repository.
 
