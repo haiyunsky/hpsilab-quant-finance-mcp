@@ -1,7 +1,9 @@
 import asyncio
+import io
 import os
 import sys
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from unittest import mock
 
@@ -9,7 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from hpsilab_mcp import HpsiMcpAuthError
+
 from hpsilab_quant_finance_mcp import server
+from hpsilab_quant_finance_mcp.service import QuantFinanceService
 
 
 class FakeClient:
@@ -51,6 +55,21 @@ def make_fake_client(method_name, result=None, exception=None):
 
 
 class ServerTests(unittest.TestCase):
+    def test_server_advertises_cross_tool_instructions(self):
+        self.assertEqual(server.mcp._mcp_server.version, server.__version__)
+        self.assertIn("never execute trades", server.mcp.instructions)
+        self.assertIn("not idempotent", server.mcp.instructions)
+
+    def test_transport_cli_defaults_to_stdio_and_protects_remote_binding(self):
+        self.assertEqual(server._parse_args([]).transport, "stdio")
+        http_args = server._parse_args(["--transport", "streamable-http"])
+        self.assertEqual(http_args.host, "127.0.0.1")
+        self.assertEqual(http_args.port, 8000)
+
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                server._parse_args(["--transport", "streamable-http", "--host", "0.0.0.0"])
+
     def test_all_tools_expose_explicit_boolean_annotations(self):
         tools = asyncio.run(server.mcp.list_tools())
         required_hints = (
@@ -88,6 +107,29 @@ class ServerTests(unittest.TestCase):
             self.assertTrue(annotations.idempotentHint, name)
             self.assertTrue(annotations.openWorldHint, name)
 
+    def test_image_type_schema_has_explicit_enum(self):
+        tools = {tool.name: tool for tool in asyncio.run(server.mcp.list_tools())}
+        types_schema = tools["generate_stock_images"].inputSchema["properties"]["types"]
+        item_schema = next(branch["items"] for branch in types_schema["anyOf"] if branch.get("type") == "array")
+        self.assertEqual(
+            item_schema["enum"],
+            ["ai_prediction", "iv_radar", "option_pressure", "monte_carlo", "equity_curves"],
+        )
+
+    def test_generate_images_forwards_force_and_types(self):
+        fake_cls = make_fake_client("generate_stock_images", result={"symbol": "NVDA", "images": []})
+        selected = ["iv_radar", "option_pressure"]
+
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
+                result = server.generate_stock_images("nvda", force=False, types=selected)
+
+        self.assertEqual(result["symbol"], "NVDA")
+        self.assertEqual(
+            FakeClient.last_instance.calls,
+            [("generate_stock_images", "NVDA", {"force": False, "types": selected})],
+        )
+
     def test_normalize_symbol(self):
         self.assertEqual(server._normalize_symbol(" brk.b "), "BRK.B")
         self.assertEqual(server._normalize_symbol("spy"), "SPY")
@@ -112,10 +154,13 @@ class ServerTests(unittest.TestCase):
         fake_cls = make_fake_client("analyze_stock", result=response_payload)
 
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
-            with mock.patch.object(server, "HpsiMcpClient", fake_cls):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
                 result = server.analyze_stock("nvda")
 
-        self.assertEqual(result, response_payload)
+        self.assertEqual(result["symbol"], "NVDA")
+        self.assertEqual(result["signal"], "Neutral")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["disclaimer"], server.DISCLAIMER)
         self.assertEqual(FakeClient.last_instance.api_key, "test_api_key")
         self.assertEqual(FakeClient.last_instance.calls, [("analyze_stock", "NVDA", {})])
 
@@ -128,10 +173,12 @@ class ServerTests(unittest.TestCase):
         fake_cls = make_fake_client("get_pretrade_risk_scan", result=response_payload)
 
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
-            with mock.patch.object(server, "HpsiMcpClient", fake_cls):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
                 result = server.get_pretrade_risk_scan("nvda")
 
-        self.assertEqual(result, response_payload)
+        self.assertEqual(result["symbol"], "NVDA")
+        self.assertEqual(result["risk_level"], "moderate")
+        self.assertEqual(result["status"], "success")
         self.assertEqual(FakeClient.last_instance.calls, [("get_pretrade_risk_scan", "NVDA", {})])
 
     def test_http_error_returns_structured_payload(self):
@@ -141,7 +188,7 @@ class ServerTests(unittest.TestCase):
         )
 
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
-            with mock.patch.object(server, "HpsiMcpClient", fake_cls):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
                 result = server.get_iv_radar("SPY")
 
         self.assertEqual(result["status"], "error")

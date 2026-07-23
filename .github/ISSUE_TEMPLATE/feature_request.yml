@@ -1,0 +1,37 @@
+name: Enhancement proposal
+description: Propose a backward-compatible improvement after searching existing issues
+title: "[Enhancement]: "
+labels: ["enhancement", "needs-discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reliability and interoperability take priority over tool count. New-tool and schema proposals require a clear gap analysis and compatibility plan.
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the workflow problem without prescribing an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Why existing tools are insufficient
+      description: Name the tools and optional parameters you evaluated.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed backward-compatible solution
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and security impact
+      description: Address schemas, annotations, clients, authentication, side effects, and migration.
+    validations:
+      required: true
+

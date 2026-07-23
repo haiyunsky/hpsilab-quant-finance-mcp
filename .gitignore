@@ -4,7 +4,15 @@ __pycache__/
 .pytest_cache/
 build/
 dist/
-docs/
+docs/*
+!docs/chatgpt.md
+!docs/claude.md
+!docs/vscode.md
+!docs/copilot.md
+!docs/cursor.md
+!docs/architecture.md
+!docs/protocol-compatibility.md
+!docs/migration-phase-2.md
 uv.lock
 .env
 .env.*

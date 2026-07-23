@@ -1,0 +1,66 @@
+name: Client compatibility
+description: Report an installation, discovery, schema, or tool-call issue in an MCP client
+title: "[Compatibility]: "
+labels: ["compatibility", "triage"]
+body:
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed API keys, authorization headers, and private data.
+          required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: Client
+      options:
+        - ChatGPT
+        - Claude Code
+        - Claude Desktop
+        - VS Code
+        - GitHub Copilot
+        - Cursor
+        - Continue
+        - Kimi
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: client_version
+    attributes:
+      label: Client version and operating system
+    validations:
+      required: true
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Transport
+      options:
+        - Hosted Streamable HTTP
+        - Local stdio / uvx
+        - Local stdio / installed command
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Failure stage
+      options:
+        - Installation or configuration
+        - MCP initialization
+        - Tool discovery
+        - Tool selection
+        - Tool execution
+        - Result rendering
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details and reproduction
+      description: Include a sanitized configuration and exact error.
+      render: text
+    validations:
+      required: true
+

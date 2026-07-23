@@ -9,7 +9,7 @@ Set the HPSILAB_API_KEY environment variable to a valid HPSILab API key
 (format: hpsi_...).  This server registers the full 9-tool surface; the
 hosted API may enforce account-level quotas, rate limits, and symbol coverage.
 
-Remote endpoint: https://api.hpsilab.com/mcp
+Remote endpoint: https://hpsilab.com/mcp
 
 Transport
 ---------
@@ -19,28 +19,21 @@ for endpoint paths/methods. Keep this file's tool surface in sync with the
 SDK's `HpsiMcpClient` rather than re-deriving REST paths here.
 """
 
+import argparse
+import json
 import os
-import re
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from dotenv import load_dotenv
-from hpsilab_mcp import (
-    HpsiMcpAuthError,
-    HpsiMcpClient,
-    HpsiMcpConnectionError,
-    HpsiMcpPaymentError,
-    HpsiMcpRateLimitError,
-    HpsiMcpResponseError,
-    HpsiMcpTimeoutError,
-)
+from mcp import types
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
-DISCLAIMER = (
-    "Research and educational output only. This is not investment advice, "
-    "financial advice, or a recommendation to buy or sell any security."
-)
-SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9.-]{0,15}$")
+from . import __version__
+from .service import DISCLAIMER as SERVICE_DISCLAIMER
+from .service import QuantFinanceService, error_payload, normalize_symbol
+
+DISCLAIMER = SERVICE_DISCLAIMER
 
 READ_ONLY_ANNOTATIONS = {
     "readOnlyHint": True,
@@ -59,87 +52,71 @@ CREATE_EXTERNAL_ARTIFACT_ANNOTATIONS = {
     "openWorldHint": True,
 }
 
-mcp = FastMCP("Quant Finance MCP Server for Stock Analysis and Options Analytics - HPSILab")
+
+class ProtocolFastMCP(FastMCP):
+    """FastMCP adapter that preserves structured errors and marks them as errors."""
+
+    async def call_tool(self, name: str, arguments: dict[str, Any]):
+        result = await super().call_tool(name, arguments)
+        structured = result
+        if isinstance(result, tuple) and len(result) == 2:
+            structured = result[1]
+        if isinstance(structured, dict) and structured.get("status") == "error":
+            return types.CallToolResult(
+                content=[types.TextContent(type="text", text=json.dumps(structured, indent=2))],
+                structuredContent=structured,
+                isError=True,
+            )
+        return result
 
 
-# ── shared helper ──────────────────────────────────────────────────────────────
+mcp = ProtocolFastMCP(
+    "Quant Finance MCP Server for Stock Analysis and Options Analytics - HPSILab",
+    instructions=(
+        "Quantitative stock and options research only; never execute trades. "
+        "Use analyze_stock for a broad overview and dedicated tools for IV, options pressure, "
+        "Monte Carlo, backtests, or pre-trade risk. Live market outputs can change. "
+        "generate_stock_images and generate_stock_research_report create hosted artifacts, "
+        "may consume quota, and are not idempotent."
+    ),
+    website_url="https://hpsilab.com",
+    json_response=True,
+)
+# FastMCP 1.27 otherwise falls back to advertising the MCP Python SDK version
+# in initialize.serverInfo instead of this package's release version.
+mcp._mcp_server.version = __version__
 
-def _error(
-    error_code: str,
-    message: str,
-    *,
-    status_code: int | None = None,
-    symbol: str | None = None,
-    details: Any | None = None,
-) -> dict:
-    """Return a consistent error payload for MCP clients."""
-    payload: dict[str, Any] = {
-        "status": "error",
-        "error_code": error_code,
-        "message": message,
-        "disclaimer": DISCLAIMER,
-    }
-    if status_code is not None:
-        payload["status_code"] = status_code
-    if symbol is not None:
-        payload["symbol"] = symbol
-    if details is not None:
-        payload["details"] = details
-    return payload
+StockReportImageType = Literal[
+    "ai_prediction",
+    "iv_radar",
+    "option_pressure",
+    "monte_carlo",
+    "equity_curves",
+]
+
+
+# ── shared service adapter ─────────────────────────────────────────────────────
+
+_service = QuantFinanceService()
+
+
+def _error(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """Backward-compatible alias for the historical private helper."""
+    return error_payload(*args, **kwargs)
 
 
 def _get_api_key() -> str:
+    """Backward-compatible helper used by downstream diagnostics."""
     return os.getenv("HPSILAB_API_KEY", "").strip()
 
 
 def _normalize_symbol(symbol: str) -> str:
-    if not isinstance(symbol, str):
-        raise ValueError("symbol must be a ticker string, such as 'NVDA' or 'SPY'.")
-
-    normalized = symbol.strip().upper()
-    if not SYMBOL_PATTERN.fullmatch(normalized):
-        raise ValueError(
-            "symbol must be an exchange ticker using letters, numbers, '.', or '-', "
-            "for example 'NVDA', 'SPY', or 'BRK.B'."
-        )
-    return normalized
+    """Backward-compatible alias for the shared service validator."""
+    return normalize_symbol(symbol)
 
 
-def _call(method_name: str, symbol: str, **kwargs: Any) -> dict:
-    """Validate `symbol`, call the named HpsiMcpClient method, and normalize the
-    outcome into this server's `_error()`/raw-dict response contract."""
-    try:
-        normalized_symbol = _normalize_symbol(symbol)
-    except ValueError as exc:
-        return _error("invalid_symbol", str(exc))
-
-    api_key = _get_api_key()
-    if not api_key:
-        return _error(
-            "missing_api_key",
-            "Set HPSILAB_API_KEY to a valid HPSILab API key before calling this tool.",
-            symbol=normalized_symbol,
-        )
-
-    try:
-        with HpsiMcpClient(api_key=api_key) as client:
-            method = getattr(client, method_name)
-            return method(normalized_symbol, **kwargs)
-    except HpsiMcpPaymentError as exc:
-        return _error("payment_required", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
-    except HpsiMcpRateLimitError as exc:
-        return _error("rate_limited", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
-    except HpsiMcpAuthError as exc:
-        return _error("http_error", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
-    except HpsiMcpTimeoutError as exc:
-        return _error("request_timeout", str(exc), symbol=normalized_symbol)
-    except HpsiMcpConnectionError as exc:
-        return _error("request_failed", str(exc), symbol=normalized_symbol)
-    except HpsiMcpResponseError as exc:
-        return _error("invalid_json", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
-    except Exception as exc:  # HpsiMcpAPIError and anything else from the SDK
-        status_code = getattr(exc, "status_code", None)
-        return _error("http_error", str(exc), status_code=status_code, symbol=normalized_symbol)
+def _call(method_name: str, symbol: str, **kwargs: Any) -> dict[str, Any]:
+    return _service.call(method_name, symbol, **kwargs)
 
 
 _TICKER_FIELD = Field(
@@ -154,8 +131,9 @@ _TICKER_FIELD = Field(
 
 # ── Tool 1 — comprehensive analysis ───────────────────────────────────────────
 
+
 @mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
-def analyze_stock(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
+def analyze_stock(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Run a full institutional-grade quantitative analysis for a single stock.
 
@@ -192,8 +170,9 @@ def analyze_stock(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
 
 # ── Tool 2 — IV radar ─────────────────────────────────────────────────────────
 
+
 @mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
-def get_iv_radar(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
+def get_iv_radar(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Retrieve implied-volatility (IV) metrics for a single stock.
 
@@ -223,8 +202,9 @@ def get_iv_radar(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
 
 # ── Tool 3 — option pressure ──────────────────────────────────────────────────
 
+
 @mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
-def get_option_pressure(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
+def get_option_pressure(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Retrieve options-market positioning and dealer-hedging pressure zones.
 
@@ -252,8 +232,9 @@ def get_option_pressure(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
 
 # ── Tool 4 — Monte Carlo ──────────────────────────────────────────────────────
 
+
 @mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
-def get_monte_carlo(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
+def get_monte_carlo(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Run a Monte Carlo price-path simulation for a stock over a 30-day horizon.
 
@@ -285,6 +266,7 @@ def get_monte_carlo(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
 
 # ── Tool 5 — AI prediction ────────────────────────────────────────────────────
 
+
 @mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
 def get_ai_prediction(
     symbol: Annotated[
@@ -300,7 +282,7 @@ def get_ai_prediction(
             examples=["NVDA", "META", "QQQ"],
         ),
     ],
-) -> dict:
+) -> dict[str, Any]:
     """
     Get an AI/ML directional prediction for a stock's next-session move.
 
@@ -331,8 +313,9 @@ def get_ai_prediction(
 
 # ── Tool 6 — equity curves ────────────────────────────────────────────────────
 
+
 @mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
-def get_equity_curves(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
+def get_equity_curves(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Retrieve backtested equity curves and performance metrics for standard
     quantitative strategies applied to a single stock.
@@ -364,6 +347,7 @@ def get_equity_curves(symbol: Annotated[str, _TICKER_FIELD]) -> dict:
 
 # ── Tool 7 — stock research report ───────────────────────────────────────────
 
+
 @mcp.tool(
     annotations=CREATE_EXTERNAL_ARTIFACT_ANNOTATIONS,
     meta={
@@ -386,7 +370,7 @@ def generate_stock_research_report(
             examples=["NVDA", "TSLA", "SPY"],
         ),
     ],
-) -> dict:
+) -> dict[str, Any]:
     """
     Generate a structured, institutional-style markdown research report for
     a single stock, covering all major quantitative signal sources.
@@ -430,6 +414,7 @@ def generate_stock_research_report(
 
 # ── Tool 8 — stock chart images ───────────────────────────────────────────────
 
+
 @mcp.tool(
     annotations=CREATE_EXTERNAL_ARTIFACT_ANNOTATIONS,
     meta={"x-tier": "free"},
@@ -446,7 +431,15 @@ def generate_stock_images(
             examples=["NVDA", "AAPL"],
         ),
     ],
-) -> dict:
+    force: Annotated[
+        bool,
+        Field(description="Regenerate hosted images instead of reusing cached artifacts."),
+    ] = True,
+    types: Annotated[
+        list[StockReportImageType] | None,
+        Field(description="Optional chart types to generate. Omit or use null to generate every type."),
+    ] = None,
+) -> dict[str, Any]:
     """
     Generate chart image URLs for a stock: price chart, IV surface, and
     options flow heatmap.
@@ -455,6 +448,15 @@ def generate_stock_images(
     - A user explicitly asks to "see", "show", or "visualize" a chart.
     - You want to accompany a written analysis with supporting visuals.
     - You need to share chart links in a report or message.
+
+    Parameters
+    ----------
+    force:
+        Regenerate images instead of reusing cached artifacts. Defaults to True.
+    types:
+        Optional subset of chart types. Allowed values: ai_prediction,
+        iv_radar, option_pressure, monte_carlo, equity_curves. Omit to
+        generate every chart type.
 
     Note: Images are served as public URLs.  They expire after 24 hours.
     If images do not render in your client, copy the URL and open it in a
@@ -469,10 +471,11 @@ def generate_stock_images(
         options_flow_url: str — URL to options flow heatmap (PNG)
         expires_at      : str — ISO 8601 expiry timestamp for the URLs
     """
-    return _call("generate_stock_images", symbol)
+    return _call("generate_stock_images", symbol, force=force, types=types)
 
 
 # ── Tool 9 — pre-trade risk scan ───────────────────────────────────────────────
+
 
 @mcp.tool(
     annotations=READ_ONLY_ANNOTATIONS,
@@ -496,7 +499,7 @@ def get_pretrade_risk_scan(
             examples=["NVDA", "AAPL", "SPY"],
         ),
     ],
-) -> dict:
+) -> dict[str, Any]:
     """
     Run a pre-trade risk scan for adding a single stock to the user's tracked
     portfolio, covering volatility/beta/VaR/drawdown deltas, market regime,
@@ -598,9 +601,46 @@ def get_pretrade_risk_scan(
 
 # ── entry point ────────────────────────────────────────────────────────────────
 
-def main():
+
+def create_http_app():
+    """Return the ASGI Streamable HTTP application for external hosting."""
+    return mcp.streamable_http_app()
+
+
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="HPSILab Quant Finance MCP server")
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "streamable-http"),
+        default=os.getenv("HPSILAB_MCP_TRANSPORT", "stdio"),
+        help="MCP transport (default: stdio; env: HPSILAB_MCP_TRANSPORT)",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.getenv("HPSILAB_MCP_HOST", "127.0.0.1"),
+        help="HTTP bind host (default: 127.0.0.1; env: HPSILAB_MCP_HOST)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("HPSILAB_MCP_PORT", "8000")),
+        help="HTTP bind port (default: 8000; env: HPSILAB_MCP_PORT)",
+    )
+    args = parser.parse_args(argv)
+    if args.transport == "streamable-http" and args.host not in {"127.0.0.1", "localhost", "::1"}:
+        parser.error(
+            "the built-in HTTP runner only binds to loopback; use create_http_app() "
+            "with explicit production transport-security settings for remote hosting"
+        )
+    return args
+
+
+def main(argv: list[str] | None = None):
     load_dotenv()
-    mcp.run()
+    args = _parse_args(argv)
+    mcp.settings.host = args.host
+    mcp.settings.port = args.port
+    mcp.run(transport=args.transport)
 
 
 if __name__ == "__main__":
