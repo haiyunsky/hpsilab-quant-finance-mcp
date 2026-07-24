@@ -60,6 +60,8 @@ For production HTTP OAuth, the MCP server should become an OAuth 2.1 resource se
 5. support Client ID Metadata Documents where available and DCR as a compatibility fallback;
 6. leave stdio API-key behavior unchanged.
 
+**This plan is still future work for this package.** The hosted deployment at `https://hpsilab.com/mcp` already supports OAuth 2.1 Authorization Code + PKCE with Dynamic Client Registration (added 2026-07-24) — but that is a separate, internally-hosted code path independent of this PyPI package's `auth.py`. If this package's own local Streamable HTTP mode is ever given OAuth support, it would follow the plan above; it does not inherit the hosted deployment's implementation.
+
 OAuth access tokens must never be accepted in query parameters or treated as a process-global API key.
 
 ## Transport selection
