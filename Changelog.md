@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-07-29
+
 ### Added
 
 - Repository-wide guidance for AI coding assistants in `AGENTS.md`.
@@ -69,7 +71,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `get_pretrade_risk_scan`.
 
-[Unreleased]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.5.4...HEAD
+[0.5.4]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/releases/tag/v0.5.4
 [0.5.3]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/releases/tag/v0.5.3
 [0.5.2]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/releases/tag/v0.5.2
 [0.5.1]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/releases/tag/v0.5.1
