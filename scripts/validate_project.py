@@ -22,7 +22,7 @@ EXPECTED_TOOLS = {
     "get_iv_radar",
     "get_option_pressure",
     "get_monte_carlo",
-    "get_equity_curves",
+    "get_equity_curve",
     "get_pretrade_risk_scan",
     "generate_stock_images",
     "generate_stock_research_report",

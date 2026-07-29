@@ -225,7 +225,7 @@ Tool names are part of the public compatibility contract and are not renamed cas
 | `get_iv_radar` | IV level, rank, percentile, skew, and regime | Read-only, idempotent |
 | `get_option_pressure` | Max pain, gamma walls, expected move, and pressure zones | Read-only, idempotent |
 | `get_monte_carlo` | Thirty-day simulated price distribution and probabilities | Read-only, idempotent |
-| `get_equity_curves` | Strategy backtests and risk-adjusted performance | Read-only, idempotent |
+| `get_equity_curve` | Strategy backtests and risk-adjusted performance | Read-only, idempotent |
 | `get_pretrade_risk_scan` | Position, portfolio exposure, and correlation risk checks | Read-only, idempotent |
 | `generate_stock_images` | Create hosted chart artifacts | Creates artifacts; not idempotent |
 | `generate_stock_research_report` | Create a structured hosted research report | Creates an artifact; not idempotent |

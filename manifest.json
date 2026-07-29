@@ -1,7 +1,7 @@
 {
   "name": "hpsilab-quant-finance-mcp",
   "display_name": "Quant Finance MCP Server by HPSILab",
-  "version": "0.5.4",
+  "version": "0.6.0",
   "description": "9-tool quant finance MCP server for stock analysis, options analytics, implied volatility, Monte Carlo simulation, AI prediction, pre-trade risk scanning, research reports, chart generation, and backtesting.",
   "author": "Haiyun Hu",
   "homepage": "https://hpsilab.com",
@@ -33,7 +33,7 @@
       "description": "Monte Carlo stock simulation"
     },
     {
-      "name": "get_equity_curves",
+      "name": "get_equity_curve",
       "description": "Backtesting and strategy equity curves"
     },
     {

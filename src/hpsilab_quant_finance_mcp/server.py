@@ -315,7 +315,7 @@ def get_ai_prediction(
 
 
 @mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
-def get_equity_curves(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
+def get_equity_curve(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Retrieve backtested equity curves and performance metrics for standard
     quantitative strategies applied to a single stock.
@@ -342,7 +342,7 @@ def get_equity_curves(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
             pl_ratio      : float — average win / average loss
             equity_curve  : list  — daily portfolio value series
     """
-    return _call("get_equity_curves", symbol)
+    return _call("get_equity_curve", symbol)
 
 
 # ── Tool 7 — stock research report ───────────────────────────────────────────

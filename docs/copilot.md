@@ -65,7 +65,7 @@ aggregate signal, IV regime, expected move, Monte Carlo range, and risk warnings
 ```
 
 ```text
-Use only HPSILab's get_equity_curves tool for AMD. Rank the returned strategies
+Use only HPSILab's get_equity_curve tool for AMD. Rank the returned strategies
 by Sharpe ratio, then compare max drawdown and win rate. Do not infer missing data.
 ```
 
