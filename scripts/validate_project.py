@@ -48,6 +48,20 @@ def validate_release_metadata() -> None:
     if len(set(versions.values())) != 1:
         raise ValueError(f"Release versions are not synchronized: {versions}")
 
+    # The Official MCP Registry proves PyPI ownership by looking for this
+    # marker in the *published package's* README. Losing it does not break the
+    # build, the tests, or a PyPI release — it only makes `mcp-publisher
+    # publish` fail with a 400 long afterwards, and since PyPI releases are
+    # immutable the fix costs a whole new version. It went missing in a docs
+    # refactor on 2026-07-24 and silently blocked three releases (0.6.0, 0.7.0,
+    # 0.7.1) from ever reaching the registry.
+    marker = f"<!-- mcp-name: {registry['name']} -->"
+    if marker not in (ROOT / "README.md").read_text(encoding="utf-8"):
+        raise ValueError(
+            f"README.md is missing the MCP Registry ownership marker: {marker}\n"
+            "Without it `mcp-publisher publish` fails PyPI ownership validation."
+        )
+
     if registry["packages"][0]["transport"]["type"] != "stdio":
         raise ValueError("The Official MCP Registry package must advertise stdio")
     if registry["remotes"][0]["type"] != "streamable-http":

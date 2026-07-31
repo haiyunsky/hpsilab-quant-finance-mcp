@@ -1,5 +1,7 @@
 # HPSILab Quant Finance MCP
 
+<!-- mcp-name: io.github.haiyunsky/hpsilab-quant-finance-mcp -->
+
 **Production-focused quantitative research for US stocks and options, available directly inside ChatGPT, Claude, VS Code, GitHub Copilot, Cursor, Continue, Kimi, and other MCP clients.**
 
 HPSILab combines stock signals, implied volatility, options positioning, Monte Carlo scenarios, strategy backtests, pre-trade risk checks, charts, and research reports behind ten purpose-built MCP tools. Ask a question in natural language and receive structured data that an assistant can explain, compare, and use in a larger research workflow.

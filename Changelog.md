@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-07-31
+
+### Fixed
+
+- Restored the MCP Registry ownership marker in `README.md`. The registry
+  proves PyPI ownership by looking for `<!-- mcp-name: ... -->` inside the
+  *published package's* README; it was dropped in the 2026-07-24 documentation
+  refactor, and `mcp-publisher publish` has failed with a 400 ever since.
+
+  Nothing surfaced the loss: builds, tests and PyPI releases were all unaffected,
+  so 0.6.0, 0.7.0 and 0.7.1 shipped normally while the registry silently stayed
+  on 0.5.3. Because PyPI releases are immutable, restoring the marker requires a
+  new version — hence this release.
+
+### Added
+
+- `scripts/validate_project.py` now fails when that marker is missing, so it
+  cannot be lost again without CI saying so.
+
 ## [0.7.1] - 2026-07-31
 
 ### Fixed
