@@ -167,6 +167,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(result["error_code"], "missing_api_key")
         self.assertEqual(result["symbol"], "NVDA")
         self.assertIn("HPSILAB_API_KEY", result["message"])
+        # The error must name the way out. A caller with no key and no idea
+        # how to get one is exactly who reads this message.
+        self.assertIn("register_account", result["message"])
 
     def test_analyze_stock_uses_normalized_symbol_and_api_key(self):
         response_payload = {"symbol": "NVDA", "signal": "Neutral"}

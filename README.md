@@ -69,7 +69,7 @@ The hosted Streamable HTTP endpoint is the recommended path. It requires no loca
 
 The hosted service may expose rate-limited anonymous tools without a key. Authenticated access is recommended for predictable quotas and the complete account-enabled experience.
 
-The hosted endpoint issues an anonymous caller a free key on its first successful call (returned in the tool result and the `X-HPSILAB-Anon-Key` header); sending it back raises the daily allowance. An agent that wants a real account can call the hosted `register_account` tool with an email address and get an API key without a password, a wallet, or a web form — the account is bound to the caller server-side, so later calls are recognised even though an MCP client cannot rewrite its own `Authorization` header. Confirming the emailed link unlocks the full Free plan.
+The hosted endpoint issues an anonymous caller a free key on its first successful call (returned in the tool result and the `X-HPSILAB-Anon-Key` header); sending it back raises the daily allowance. An agent that wants a real account can call the `register_account` tool — available on the hosted endpoint and in this package alike — with an email address, and get an API key without a password, a wallet, or a web form. The account is bound to the caller server-side, so later calls are recognised even though an MCP client cannot rewrite its own `Authorization` header. Confirming the emailed link unlocks the full Free plan.
 
 ## Installation
 
@@ -79,7 +79,7 @@ Configure your client with the endpoint and bearer header shown above. See the c
 
 ### Option B: local stdio server
 
-The local package delegates calculations to the HPSILab API through the `hpsilab-mcp` SDK, so it still requires network access and a valid API key.
+The local package delegates calculations to the HPSILab API through the `hpsilab-mcp` SDK, so it always requires network access. It also needs an API key for the nine analysis tools — but you do not need to obtain one beforehand: install the package, then call `register_account` (see [Getting an API key without leaving your client](#getting-an-api-key-without-leaving-your-client)).
 
 ```bash
 pip install hpsilab-quant-finance-mcp
@@ -267,9 +267,9 @@ No. It provides quantitative research data and analysis tools. It does not place
 
 ### Do I need an API key?
 
-The local stdio package requires `HPSILAB_API_KEY`. The hosted endpoint may allow a rate-limited anonymous subset, but authenticated access is recommended and may be required for account-dependent tools.
+For the nine analysis tools, yes: the local stdio package reads `HPSILAB_API_KEY`, and the hosted endpoint meters unauthenticated callers on a small anonymous allowance.
 
-If you are an agent with no key, the hosted endpoint's `register_account` tool will create a free account and return one — no human step involved.
+But you do not need to have one already. `register_account` is available on **both** the local package and the hosted endpoint, and it is the one tool that works without a key — call it with an email address and it returns a real key, with no password, wallet, or web form. An agent can do this unattended.
 
 ### What markets are supported?
 

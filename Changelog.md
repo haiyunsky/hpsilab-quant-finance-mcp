@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-07-31
+
+### Fixed
+
+- Documentation stated that `register_account` belonged to the hosted endpoint.
+  It ships in this package too, as of 0.7.0 — the FAQ told local-stdio users
+  that the one feature added for them was somewhere else. The README also still
+  said a valid API key was needed before installing, which stopped being true
+  in 0.7.0.
+
+### Changed
+
+- The `missing_api_key` error now names `register_account` as the way to obtain
+  a key. Previously it said only "Set HPSILAB_API_KEY", which is a dead end for
+  a caller that has no key and no way to get one — while the tool that hands
+  one over sat unmentioned in the same tool list.
+
 ## [0.7.0] - 2026-07-31
 
 ### Added

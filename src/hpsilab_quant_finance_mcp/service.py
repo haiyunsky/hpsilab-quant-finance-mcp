@@ -96,9 +96,16 @@ class QuantFinanceService:
 
         api_key = self._credential_provider.get_api_key()
         if not api_key:
+            # Name the way out, in the caller's own terms. Without this the
+            # message is a dead end: the caller is told it needs a credential
+            # it has no way to obtain, while the tool that hands one over sits
+            # unmentioned in the same tool list.
             return error_payload(
                 "missing_api_key",
-                "Set HPSILAB_API_KEY to a valid HPSILab API key before calling this tool.",
+                "No API key configured. If you do not have one, call the register_account "
+                "tool with an email address to create a free account and receive a key - "
+                "no password, wallet, or web form needed. Then set HPSILAB_API_KEY to the "
+                "returned api_key. If you already have a key, set HPSILAB_API_KEY to it.",
                 symbol=normalized_symbol,
             )
 
