@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-07-31
+
+### Changed
+
+- Bumped the `hpsilab-mcp` dependency floor to `>=0.8.2` to pick up its
+  simplified anonymous-quota warning: 429/402 rejections for a caller with no
+  account and no key now surface one unified message ("Free API key required.
+  Register at https://hpsilab.com/register, or call
+  `client.register_account(email=...)`") instead of separate keyed/unkeyed
+  wording. This package has no copy of that text itself — it delegates to the
+  SDK — so there is no other source change here.
+
 ## [0.7.2] - 2026-07-31
 
 ### Fixed
