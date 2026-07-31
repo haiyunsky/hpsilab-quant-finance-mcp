@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-31
+
+### Added
+
+- `register_account` tool — create a free HPSILab account and receive an API
+  key without a password, a wallet, or a web form. This is the only tool that
+  works *without* `HPSILAB_API_KEY`: every other tool returns `missing_api_key`
+  without one, and this is how a caller obtains one. The account is created
+  unverified (keeping the anonymous daily allowance) until the emailed link is
+  confirmed, and it is also bound to the caller server-side, so an MCP client
+  that cannot rewrite its own `Authorization` header is still recognised.
+
+  Calling it again returns the same account with a fresh key rather than
+  creating a second one. An address already belonging to a different account is
+  refused, so an agent cannot attach itself to someone else's account.
+
+### Changed
+
+- Minimum `hpsilab-mcp` is now 0.8.0, which provides the underlying
+  `register_account()` client method.
+
+## [0.6.0] - 2026-07-30
+
+Recorded retrospectively — this release shipped without a changelog entry.
+
+### Changed
+
+- **Breaking:** `get_equity_curves` renamed to `get_equity_curve` for
+  consistency with the other singular tool names.
+
 ## [0.5.4] - 2026-07-29
 
 ### Added

@@ -41,6 +41,7 @@ class ToolSchemaTests(unittest.TestCase):
             "get_pretrade_risk_scan",
             "generate_stock_images",
             "generate_stock_research_report",
+            "register_account",
         }
         self.assertEqual({tool.name for tool in tools}, expected_names)
 
@@ -92,7 +93,7 @@ class StdioProtocolTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(initialized.capabilities.prompts.listChanged)
 
                 tools = await session.list_tools()
-                self.assertEqual(len(tools.tools), 9)
+                self.assertEqual(len(tools.tools), 10)
                 self.assertEqual((await session.list_resources()).resources, [])
                 self.assertEqual((await session.list_prompts()).prompts, [])
 
@@ -145,7 +146,7 @@ class StreamableHttpTests(unittest.TestCase):
                 headers=session_headers,
             )
             self.assertEqual(listed.status_code, 200, listed.text)
-            self.assertEqual(len(listed.json()["result"]["tools"]), 9)
+            self.assertEqual(len(listed.json()["result"]["tools"]), 10)
 
             invalid_call = client.post(
                 "/mcp",

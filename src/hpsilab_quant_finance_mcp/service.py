@@ -128,3 +128,52 @@ class QuantFinanceService:
         except Exception as exc:
             status_code = getattr(exc, "status_code", None)
             return error_payload("http_error", str(exc), status_code=status_code, symbol=normalized_symbol)
+
+    def register_account(self, email: str) -> dict[str, Any]:
+        """Create a free HPSILab account for the caller and return an API key.
+
+        Deliberately does not go through `call()`. That path validates a ticker
+        and refuses outright when HPSILAB_API_KEY is unset — both correct for a
+        market-data tool and both wrong here. This is the one operation whose
+        entire purpose is to serve a caller that has **no** key yet, so
+        requiring one would make it unreachable exactly when it is needed.
+
+        An existing key is still passed through when present: the SDK then
+        leaves it in place rather than swapping the caller's credential, and
+        the backend answers idempotently for a caller that is already
+        registered.
+        """
+        normalized_email = (email or "").strip()
+        if "@" not in normalized_email or len(normalized_email) < 3:
+            return error_payload(
+                "invalid_email",
+                "email must be a real address, for example 'you@example.com'. "
+                "The verification link is sent there, and an address nobody "
+                "reads leaves the account at the anonymous allowance.",
+            )
+
+        try:
+            with self._client_factory(api_key=self._credential_provider.get_api_key()) as client:
+                result = client.register_account(normalized_email)
+            if not isinstance(result, dict):
+                return error_payload(
+                    "invalid_response",
+                    "The HPSILab service returned a non-object response.",
+                )
+            return normalize_success_payload(result)
+        except HpsiMcpAuthError as exc:
+            return error_payload("http_error", str(exc), status_code=exc.status_code)
+        except HpsiMcpRateLimitError as exc:
+            return error_payload("rate_limited", str(exc), status_code=exc.status_code)
+        except HpsiMcpTimeoutError as exc:
+            return error_payload("request_timeout", str(exc))
+        except HpsiMcpConnectionError as exc:
+            return error_payload("request_failed", str(exc))
+        except HpsiMcpResponseError as exc:
+            return error_payload("invalid_json", str(exc), status_code=exc.status_code)
+        except Exception as exc:
+            # A 409 lands here: the address already belongs to a different
+            # account. Surfaced as-is rather than retried or rewritten — an
+            # agent must not be able to attach itself to someone else's account.
+            status_code = getattr(exc, "status_code", None)
+            return error_payload("http_error", str(exc), status_code=status_code)

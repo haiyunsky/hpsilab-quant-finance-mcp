@@ -79,7 +79,7 @@ class ServerTests(unittest.TestCase):
             "openWorldHint",
         )
 
-        self.assertEqual(len(tools), 9)
+        self.assertEqual(len(tools), 10)
         for tool in tools:
             self.assertIsNotNone(tool.annotations, tool.name)
             for hint in required_hints:
@@ -98,14 +98,33 @@ class ServerTests(unittest.TestCase):
     def test_analysis_tools_are_read_only_idempotent_and_open_world(self):
         tools = {tool.name: tool for tool in asyncio.run(server.mcp.list_tools())}
 
+        # Tools that change state outside this process: the two artifact
+        # generators, plus register_account (creates an account, sends an email,
+        # and issues a fresh API key on every call).
+        mutating = {
+            "generate_stock_images",
+            "generate_stock_research_report",
+            "register_account",
+        }
         for name, tool in tools.items():
-            if name in {"generate_stock_images", "generate_stock_research_report"}:
+            if name in mutating:
                 continue
             annotations = tool.annotations
             self.assertTrue(annotations.readOnlyHint, name)
             self.assertFalse(annotations.destructiveHint, name)
             self.assertTrue(annotations.idempotentHint, name)
             self.assertTrue(annotations.openWorldHint, name)
+
+    def test_register_account_is_annotated_as_mutating(self):
+        """It must not be advertised as read-only: a client that trusts
+        readOnlyHint could otherwise call it speculatively and create accounts."""
+        tools = {tool.name: tool for tool in asyncio.run(server.mcp.list_tools())}
+        annotations = tools["register_account"].annotations
+
+        self.assertFalse(annotations.readOnlyHint)
+        self.assertFalse(annotations.idempotentHint)
+        self.assertFalse(annotations.destructiveHint)
+        self.assertTrue(annotations.openWorldHint)
 
     def test_image_type_schema_has_explicit_enum(self):
         tools = {tool.name: tool for tool in asyncio.run(server.mcp.list_tools())}
@@ -196,6 +215,92 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(result["status_code"], 403)
         self.assertEqual(result["message"], "quota exceeded")
         self.assertEqual(result["symbol"], "SPY")
+
+
+def make_fake_register_client(result=None, exception=None):
+    """register_account takes an email, not a ticker, so it needs its own
+    stand-in rather than make_fake_client's (symbol, **kwargs) shape."""
+
+    class _Client(FakeClient):
+        def register_account(self, email, **kwargs):
+            self._record("register_account", email, **kwargs)
+            if exception is not None:
+                raise exception
+            return result
+
+    return _Client
+
+
+class RegisterAccountTests(unittest.TestCase):
+    PAYLOAD = {
+        "user_id": 1,
+        "email": "agent@example.com",
+        "tier": "free",
+        "email_verified": False,
+        "api_key": "hpsi_newkey",
+        "already_registered": False,
+        "message": "Registered.",
+    }
+
+    def test_works_without_an_api_key(self):
+        """The whole point of the tool: every other tool refuses with
+        missing_api_key, and this one must not — it is how a caller with no key
+        obtains one."""
+        fake_cls = make_fake_register_client(result=self.PAYLOAD)
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
+                result = server.register_account("agent@example.com")
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["api_key"], "hpsi_newkey")
+        self.assertEqual(FakeClient.last_instance.calls, [("register_account", "agent@example.com", {})])
+
+    def test_passes_an_existing_key_through_when_present(self):
+        fake_cls = make_fake_register_client(result={**self.PAYLOAD, "already_registered": True})
+
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "existing_key"}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
+                result = server.register_account("agent@example.com")
+
+        self.assertEqual(result["status"], "success")
+        self.assertTrue(result["already_registered"])
+        self.assertEqual(FakeClient.last_instance.api_key, "existing_key")
+
+    def test_rejects_a_malformed_email_without_calling_the_api(self):
+        fake_cls = make_fake_register_client(result=self.PAYLOAD)
+        FakeClient.last_instance = None
+
+        with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
+            result = server.register_account("not-an-email")
+
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["error_code"], "invalid_email")
+        self.assertIsNone(FakeClient.last_instance)
+
+    def test_email_collision_is_surfaced_not_retried(self):
+        """A 409 means the address belongs to someone else. It must reach the
+        caller as an error — an agent must never be able to attach itself to a
+        stranger's account."""
+        fake_cls = make_fake_register_client(
+            exception=HpsiMcpAuthError("That email is already registered.", status_code=409)
+        )
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
+                result = server.register_account("someone-else@example.com")
+
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["status_code"], 409)
+
+    def test_trims_surrounding_whitespace(self):
+        fake_cls = make_fake_register_client(result=self.PAYLOAD)
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
+                server.register_account("  agent@example.com  ")
+
+        self.assertEqual(FakeClient.last_instance.calls[0][1], "agent@example.com")
 
 
 if __name__ == "__main__":

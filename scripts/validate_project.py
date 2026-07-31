@@ -26,6 +26,7 @@ EXPECTED_TOOLS = {
     "get_pretrade_risk_scan",
     "generate_stock_images",
     "generate_stock_research_report",
+    "register_account",
 }
 REQUIRED_ANNOTATIONS = ("readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint")
 

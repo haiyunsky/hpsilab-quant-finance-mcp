@@ -2,7 +2,7 @@
 
 **Production-focused quantitative research for US stocks and options, available directly inside ChatGPT, Claude, VS Code, GitHub Copilot, Cursor, Continue, Kimi, and other MCP clients.**
 
-HPSILab combines stock signals, implied volatility, options positioning, Monte Carlo scenarios, strategy backtests, pre-trade risk checks, charts, and research reports behind nine purpose-built MCP tools. Ask a question in natural language and receive structured data that an assistant can explain, compare, and use in a larger research workflow.
+HPSILab combines stock signals, implied volatility, options positioning, Monte Carlo scenarios, strategy backtests, pre-trade risk checks, charts, and research reports behind ten purpose-built MCP tools. Ask a question in natural language and receive structured data that an assistant can explain, compare, and use in a larger research workflow.
 
 > Research and educational use only. HPSILab does not execute trades and does not provide investment advice.
 
@@ -45,6 +45,7 @@ The project is designed for investors, options researchers, quantitative develop
 - **Strategy backtests** — compare returns, Sharpe and Sortino ratios, drawdown, and win rate.
 - **Pre-trade risk scan** — review volatility, beta, VaR, drawdown, sizing, exposure, and correlation checks.
 - **Research artifacts** — generate structured reports and hosted chart images.
+- **Self-service onboarding** — an agent can register its own account and obtain an API key without a password, a wallet, or a web form.
 - **Agent-friendly contract** — typed inputs, structured dictionaries, stable tool names, and explicit MCP annotations.
 
 ## Quick Start
@@ -67,6 +68,8 @@ The hosted Streamable HTTP endpoint is the recommended path. It requires no loca
    ```
 
 The hosted service may expose rate-limited anonymous tools without a key. Authenticated access is recommended for predictable quotas and the complete account-enabled experience.
+
+The hosted endpoint issues an anonymous caller a free key on its first successful call (returned in the tool result and the `X-HPSILAB-Anon-Key` header); sending it back raises the daily allowance. An agent that wants a real account can call the hosted `register_account` tool with an email address and get an API key without a password, a wallet, or a web form — the account is bound to the caller server-side, so later calls are recognised even though an MCP client cannot rewrite its own `Authorization` header. Confirming the emailed link unlocks the full Free plan.
 
 ## Installation
 
@@ -117,7 +120,7 @@ Set `HPSILAB_API_KEY`, then run `hpsilab-quant-finance-mcp`.
 
 ### Local Streamable HTTP
 
-The same nine tools can be served locally over the standard HTTP transport without duplicating business logic:
+The same ten tools can be served locally over the standard HTTP transport without duplicating business logic:
 
 ```bash
 hpsilab-quant-finance-mcp --transport streamable-http --host 127.0.0.1 --port 8000
@@ -229,8 +232,32 @@ Tool names are part of the public compatibility contract and are not renamed cas
 | `get_pretrade_risk_scan` | Position, portfolio exposure, and correlation risk checks | Read-only, idempotent |
 | `generate_stock_images` | Create hosted chart artifacts | Creates artifacts; not idempotent |
 | `generate_stock_research_report` | Create a structured hosted research report | Creates an artifact; not idempotent |
+| `register_account` | Create a free account and receive an API key | Creates an account; not idempotent |
 
-All tools accept an exchange ticker such as `NVDA`, `AAPL`, `SPY`, or `BRK.B`. Company names are not accepted in place of tickers. Live outputs can change between calls. Artifact-producing tools may consume quota, and generated image URLs can expire.
+The nine analysis tools each accept an exchange ticker such as `NVDA`, `AAPL`, `SPY`, or `BRK.B`. Company names are not accepted in place of tickers. Live outputs can change between calls. Artifact-producing tools may consume quota, and generated image URLs can expire.
+
+### Getting an API key without leaving your client
+
+Every analysis tool requires `HPSILAB_API_KEY` and returns a `missing_api_key`
+error without one. `register_account` is the exception, and the reason it
+exists: it is the one tool that works *without* a key, because its purpose is
+to obtain one.
+
+```
+register_account("you@example.com")
+```
+
+No password, no wallet, no web form. It returns a real `hpsi_` key — set it as
+`HPSILAB_API_KEY` and the other tools authenticate as that account.
+
+The account is created **unverified**, which keeps the anonymous daily
+allowance until the emailed link is confirmed; confirming it unlocks the full
+Free plan. Use an address someone actually reads.
+
+Calling again returns the same account and a fresh key rather than creating a
+second one, so it is safe to retry if a key was lost. An address that already
+belongs to a different account is refused — you cannot attach yourself to
+someone else's account by guessing their email.
 
 ## FAQ
 
@@ -241,6 +268,8 @@ No. It provides quantitative research data and analysis tools. It does not place
 ### Do I need an API key?
 
 The local stdio package requires `HPSILAB_API_KEY`. The hosted endpoint may allow a rate-limited anonymous subset, but authenticated access is recommended and may be required for account-dependent tools.
+
+If you are an agent with no key, the hosted endpoint's `register_account` tool will create a free account and return one — no human step involved.
 
 ### What markets are supported?
 

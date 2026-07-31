@@ -52,6 +52,17 @@ CREATE_EXTERNAL_ARTIFACT_ANNOTATIONS = {
     "openWorldHint": True,
 }
 
+# Account creation. Not read-only (it creates an account and sends an email),
+# and not idempotent in the annotation sense: a repeat call returns the *same*
+# account rather than a second one, but it does issue an additional API key
+# each time. Nothing is ever overwritten or deleted.
+CREATE_ACCOUNT_ANNOTATIONS = {
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": True,
+}
+
 
 class ProtocolFastMCP(FastMCP):
     """FastMCP adapter that preserves structured errors and marks them as errors."""
@@ -597,6 +608,63 @@ def get_pretrade_risk_scan(
       missing data as an error.
     """
     return _call("get_pretrade_risk_scan", symbol)
+
+
+# ── Tool 10 — self-registration ───────────────────────────────────────────────
+
+
+@mcp.tool(annotations=CREATE_ACCOUNT_ANNOTATIONS, meta={"x-tier": "free"})
+def register_account(
+    email: Annotated[
+        str,
+        Field(
+            description=(
+                "A real email address to own the account. Use the operator's "
+                "address if you have one — the verification link is sent there, "
+                "and an address nobody reads leaves the account permanently at "
+                "the anonymous allowance."
+            ),
+            examples=["you@example.com"],
+        ),
+    ],
+) -> dict[str, Any]:
+    """
+    Create a free HPSILab account and receive an API key, with no human step.
+
+    Use this tool when:
+    - No HPSILAB_API_KEY is configured and the other tools are returning
+      "missing_api_key".
+    - You are hitting anonymous daily limits and want a higher allowance.
+
+    You do not need a password, a wallet, or a web browser. This is the one
+    tool that works without an API key — its whole purpose is to obtain one.
+
+    After it succeeds, set HPSILAB_API_KEY to the returned `api_key` so the
+    other tools authenticate as this account. The account is also bound to this
+    caller server-side, so calls from here are recognised even before the
+    environment variable is updated.
+
+    The account is created **unverified**, which keeps the anonymous daily
+    allowance until the emailed link is confirmed; confirming it unlocks the
+    full Free plan. Tell the operator to click that link.
+
+    Calling again returns the same account and a fresh key rather than creating
+    a second one, so it is safe to retry if a key was lost. An address that
+    already belongs to a different account is refused — you cannot attach
+    yourself to someone else's account.
+
+    Returns
+    -------
+    dict
+        user_id           : int  — the new account's id
+        email             : str  — the registered address
+        tier              : str  — plan name, "free" on registration
+        email_verified    : bool — false until the emailed link is clicked
+        api_key           : str  — set this as HPSILAB_API_KEY
+        already_registered: bool — true when this caller already had an account
+        message           : str  — next step, in plain language
+    """
+    return _service.register_account(email)
 
 
 # ── entry point ────────────────────────────────────────────────────────────────
