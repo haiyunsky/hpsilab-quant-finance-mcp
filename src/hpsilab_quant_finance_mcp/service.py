@@ -15,6 +15,7 @@ from hpsilab_mcp import (
     HpsiMcpResponseError,
     HpsiMcpTimeoutError,
 )
+from hpsilab_mcp import register as hpsilab_register
 
 from .auth import CredentialProvider, EnvironmentApiKeyProvider
 
@@ -29,6 +30,12 @@ class ClientFactory(Protocol):
     """Construct the downstream SDK client."""
 
     def __call__(self, *, api_key: str) -> HpsiMcpClient: ...
+
+
+class RegisterFn(Protocol):
+    """Bootstrap a free account with no client instance and no prior identity."""
+
+    def __call__(self, *, email: str) -> dict[str, Any]: ...
 
 
 def error_payload(
@@ -84,9 +91,11 @@ class QuantFinanceService:
         self,
         credential_provider: CredentialProvider | None = None,
         client_factory: ClientFactory | Callable[..., HpsiMcpClient] = HpsiMcpClient,
+        register_fn: RegisterFn | Callable[..., dict[str, Any]] = hpsilab_register,
     ) -> None:
         self._credential_provider = credential_provider or EnvironmentApiKeyProvider()
         self._client_factory = client_factory
+        self._register_fn = register_fn
 
     def call(self, method_name: str, symbol: str, **kwargs: Any) -> dict[str, Any]:
         try:
@@ -145,10 +154,19 @@ class QuantFinanceService:
         entire purpose is to serve a caller that has **no** key yet, so
         requiring one would make it unreachable exactly when it is needed.
 
-        An existing key is still passed through when present: the SDK then
-        leaves it in place rather than swapping the caller's credential, and
-        the backend answers idempotently for a caller that is already
-        registered.
+        Two different SDK entry points depending on whether a key is already
+        configured, not one — `HpsiMcpClient(api_key=...)` itself now refuses
+        to construct with an empty string (hpsilab-mcp >=0.11.0: API key or a
+        wallet is mandatory, there is no more anonymous construction). So:
+
+        * **No key configured** — the standalone `hpsilab_mcp.register()`
+          function, which needs no client instance and is exactly the
+          bootstrap path the SDK added for this situation.
+        * **A key is already configured** — the existing instance method
+          `client.register_account()` on a client built with that key. The
+          SDK then leaves the credential in place rather than swapping it, and
+          the backend answers idempotently for a caller that is already
+          registered (a fresh reissued key, same account).
         """
         normalized_email = (email or "").strip()
         if "@" not in normalized_email or len(normalized_email) < 3:
@@ -159,9 +177,13 @@ class QuantFinanceService:
                 "reads leaves the account at the anonymous allowance.",
             )
 
+        api_key = self._credential_provider.get_api_key()
         try:
-            with self._client_factory(api_key=self._credential_provider.get_api_key()) as client:
-                result = client.register_account(normalized_email)
+            if api_key:
+                with self._client_factory(api_key=api_key) as client:
+                    result = client.register_account(normalized_email)
+            else:
+                result = self._register_fn(email=normalized_email)
             if not isinstance(result, dict):
                 return error_payload(
                     "invalid_response",

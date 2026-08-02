@@ -7,14 +7,14 @@
     "url": "https://github.com/haiyunsky/hpsilab-quant-finance-mcp",
     "source": "github"
   },
-  "version": "0.7.3",
+  "version": "0.8.0",
   "websiteUrl": "https://hpsilab.com",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "hpsilab-quant-finance-mcp",
-      "version": "0.7.3",
+      "version": "0.8.0",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"
@@ -37,8 +37,8 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "Bearer hpsi_... API key. Optional: free-tier tools work anonymously (rate-limited demo mode).",
-          "isRequired": false,
+          "description": "Bearer hpsi_... API key. Required — no tool runs anonymously; call register_account first if you don't have a key yet.",
+          "isRequired": true,
           "isSecret": true
         }
       ]

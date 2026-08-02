@@ -656,7 +656,6 @@ def register_account(
     Returns
     -------
     dict
-        user_id           : int  — the new account's id
         email             : str  — the registered address
         tier              : str  — plan name, "free" on registration
         email_verified    : bool — false until the emailed link is clicked

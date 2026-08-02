@@ -69,9 +69,7 @@ The hosted Streamable HTTP endpoint is the recommended path. It requires no loca
    identify conflicting signals, and finish with a concise risk summary.
    ```
 
-The hosted service may expose rate-limited anonymous tools without a key. Authenticated access is recommended for predictable quotas and the complete account-enabled experience.
-
-The hosted endpoint issues an anonymous caller a free key on its first successful call (returned in the tool result and the `X-HPSILAB-Anon-Key` header); sending it back raises the daily allowance. An agent that wants a real account can call the `register_account` tool — available on the hosted endpoint and in this package alike — with an email address, and get an API key without a password, a wallet, or a web form. The account is bound to the caller server-side, so later calls are recognised even though an MCP client cannot rewrite its own `Authorization` header. Confirming the emailed link unlocks the full Free plan.
+**An API key is required** — the hosted endpoint no longer serves any tool anonymously. Don't have one yet? Skip the sign-up page: call the `register_account` tool (available on the hosted endpoint and in this package alike) with an email address and it hands back a real `hpsi_` key immediately, no password, wallet, or web form. The account is bound to the caller server-side, so later calls from the same client are recognised even before you've set `HPSILAB_API_KEY`. It starts unverified (a reduced daily allowance) until you confirm the emailed link, which unlocks the full Free plan. See [Getting an API key without leaving your client](#getting-an-api-key-without-leaving-your-client) below.
 
 ## Installation
 
@@ -269,7 +267,7 @@ No. It provides quantitative research data and analysis tools. It does not place
 
 ### Do I need an API key?
 
-For the nine analysis tools, yes: the local stdio package reads `HPSILAB_API_KEY`, and the hosted endpoint meters unauthenticated callers on a small anonymous allowance.
+For the nine analysis tools, yes: the local stdio package reads `HPSILAB_API_KEY`, and the hosted endpoint requires one too — there is no free anonymous access on either transport.
 
 But you do not need to have one already. `register_account` is available on **both** the local package and the hosted endpoint, and it is the one tool that works without a key — call it with an email address and it returns a real key, with no password, wallet, or web form. An agent can do this unattended.
 

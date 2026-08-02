@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-03
+
+### Fixed
+
+- **`register_account` was broken for the exact case it exists to handle.**
+  `hpsilab-mcp` 0.11.0 made API key mandatory: `HpsiMcpClient()` now refuses
+  to construct with an empty `api_key`, since anonymous access was retired
+  server-side. This package's `register_account` used to always build a
+  client with `api_key=<whatever HPSILAB_API_KEY resolves to, including "">`
+  and call `client.register_account(...)` on it — with no key configured
+  (the tool's entire reason to exist), that construction now raised instead
+  of running, and every call failed with a generic `http_error`.
+
+  Fixed by using the SDK's new standalone `hpsilab_mcp.register(email=...)`
+  function when no key is configured, and only falling back to the
+  client-instance path when a key already exists (e.g. re-registering the
+  same address to recover a lost key). No change to the tool's public
+  signature or return shape.
+
+### Changed
+
+- Bumped the `hpsilab-mcp` dependency floor to `>=0.11.0` (was `>=0.8.2`) —
+  the version that added `hpsilab_mcp.register()`, which the fix above
+  depends on.
+- `register_account`'s documented return shape no longer lists `user_id`.
+  The backend stopped including it (internal database primary key, not
+  something a caller has a use for) — this package never read it either, so
+  the only change is removing the now-inaccurate docstring line.
+
 ## [0.7.3] - 2026-07-31
 
 ### Changed
