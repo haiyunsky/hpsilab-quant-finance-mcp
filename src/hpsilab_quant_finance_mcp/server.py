@@ -21,6 +21,7 @@ SDK's `HpsiMcpClient` rather than re-deriving REST paths here.
 
 import argparse
 import json
+import logging
 import os
 from typing import Annotated, Any, Literal
 
@@ -96,6 +97,19 @@ mcp = ProtocolFastMCP(
 # FastMCP 1.27 otherwise falls back to advertising the MCP Python SDK version
 # in initialize.serverInfo instead of this package's release version.
 mcp._mcp_server.version = __version__
+
+# Constructing FastMCP above already called configure_logging(), which puts a
+# RichHandler on the *root* logger at INFO (mcp/server/fastmcp/utilities/
+# logging.py) — a side effect of merely importing this module, not something
+# opt-in. httpx logs "HTTP Request: GET https://.../api/..." at INFO for
+# every call the SDK makes, which then prints to stderr for anyone who just
+# `import server` to call a tool directly in a script (not running it as an
+# actual MCP process) — noisy, and not something a library import should
+# decide for the caller. Quiet the specific chatty third-party loggers rather
+# than lowering the root level, so FastMCP's own operational logging (still
+# genuinely useful when this runs as a real server) is untouched.
+for _noisy_logger in ("httpx", "httpcore"):
+    logging.getLogger(_noisy_logger).setLevel(logging.WARNING)
 
 StockReportImageType = Literal[
     "ai_prediction",

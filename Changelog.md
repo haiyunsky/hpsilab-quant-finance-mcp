@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-08-03
+
+### Fixed
+
+- **Importing `server` no longer leaks httpx request logs to stderr.**
+  Constructing `FastMCP` (module import time, not just when actually running
+  as a server) calls the SDK's `configure_logging()`, which puts a
+  `RichHandler` on the *root* logger at `INFO` — a side effect of importing
+  the module, not something opt-in. httpx logs `HTTP Request: GET
+  https://.../api/...` at `INFO` for every call, so anyone who does
+  `from hpsilab_quant_finance_mcp import server` to call a tool directly in a
+  script (rather than running the MCP process) got that printed for every
+  call. Quieted the `httpx`/`httpcore` loggers to `WARNING` specifically,
+  leaving FastMCP's own operational logging untouched for the real
+  server-process case where it's genuinely useful.
+
 ## [0.8.0] - 2026-08-03
 
 ### Fixed
