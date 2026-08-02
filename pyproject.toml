@@ -12,7 +12,7 @@ where = ["src"]
 [project]
 name = "hpsilab-quant-finance-mcp"
 version = "0.8.1"
-description = "Quant finance MCP server for stock analysis, options analytics, implied volatility, Monte Carlo simulation, AI prediction, pre-trade risk scanning, research reports, chart generation, and backtesting."
+description = "HPSILab Quant finance MCP server for stock analysis, options analytics, implied volatility, Monte Carlo simulation, AI prediction, pre-trade risk scanning, research reports, chart generation, and backtesting."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
