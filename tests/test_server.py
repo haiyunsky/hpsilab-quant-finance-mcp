@@ -154,7 +154,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(server._normalize_symbol("spy"), "SPY")
 
     def test_invalid_symbol(self):
-        result = server.analyze_stock("Nvidia Inc.")
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "test_api_key"}, clear=True):
+            result = server.analyze_stock("Nvidia Inc.")
 
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["error_code"], "invalid_symbol")
@@ -163,13 +164,15 @@ class ServerTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=True):
             result = server.analyze_stock("NVDA")
 
-        self.assertEqual(result["status"], "error")
-        self.assertEqual(result["error_code"], "missing_api_key")
-        self.assertEqual(result["symbol"], "NVDA")
-        self.assertIn("HPSILAB_API_KEY", result["message"])
-        # The error must name the way out. A caller with no key and no idea
-        # how to get one is exactly who reads this message.
-        self.assertIn("register_account", result["message"])
+        self.assertEqual(
+            result,
+            {
+                "error": "api_key_required",
+                "message": "A free API key is required.",
+                "register_url": "https://hpsilab.com/register",
+                "docs_url": "https://hpsilab.com/developer/v2",
+            },
+        )
 
     def test_analyze_stock_uses_normalized_symbol_and_api_key(self):
         response_payload = {"symbol": "NVDA", "signal": "Neutral"}
@@ -235,15 +238,7 @@ def make_fake_register_client(result=None, exception=None):
 
 
 def make_fake_register_fn(result=None, exception=None):
-    """Stand-in for hpsilab_mcp.register — the no-key bootstrap path.
-
-    Not client-shaped: it's a plain module-level function
-    (`register(*, email) -> dict`), unlike `client.register_account`, which is
-    an instance method on a constructed `HpsiMcpClient`. hpsilab-mcp >=0.11.0
-    added it precisely because `HpsiMcpClient(api_key="")` now refuses to
-    construct — there is no client to call an instance method on until a key
-    exists, which is the whole problem this function solves.
-    """
+    """Stand-in proving the retired no-key registration path is not called."""
     calls = []
 
     def _fn(*, email):
@@ -266,12 +261,7 @@ class RegisterAccountTests(unittest.TestCase):
         "message": "Registered.",
     }
 
-    def test_works_without_an_api_key(self):
-        """The whole point of the tool: every other tool refuses with
-        missing_api_key, and this one must not — it is how a caller with no key
-        obtains one. No key configured means no client can even be
-        constructed (hpsilab-mcp >=0.11.0 requires api_key or wallet), so this
-        must go through the standalone register_fn, not client_factory."""
+    def test_missing_api_key_does_not_construct_client_or_send_registration(self):
         register_fn = make_fake_register_fn(result=self.PAYLOAD)
         fake_cls = make_fake_register_client(result={**self.PAYLOAD, "api_key": "should-not-be-used"})
 
@@ -281,11 +271,8 @@ class RegisterAccountTests(unittest.TestCase):
                 FakeClient.last_instance = None
                 result = server.register_account("agent@example.com")
 
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(result["api_key"], "hpsi_newkey")
-        self.assertEqual(register_fn.calls, ["agent@example.com"])
-        # client_factory must not be touched at all on the no-key path — it
-        # can't be, HpsiMcpClient(api_key="") raises in the real SDK now.
+        self.assertEqual(result["error"], "api_key_required")
+        self.assertEqual(register_fn.calls, [])
         self.assertIsNone(FakeClient.last_instance)
 
     def test_passes_an_existing_key_through_when_present(self):
@@ -308,8 +295,9 @@ class RegisterAccountTests(unittest.TestCase):
     def test_rejects_a_malformed_email_without_calling_the_api(self):
         register_fn = make_fake_register_fn(result=self.PAYLOAD)
 
-        with mock.patch.object(server, "_service", QuantFinanceService(register_fn=register_fn)):
-            result = server.register_account("not-an-email")
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "existing_key"}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(register_fn=register_fn)):
+                result = server.register_account("not-an-email")
 
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["error_code"], "invalid_email")
@@ -319,25 +307,25 @@ class RegisterAccountTests(unittest.TestCase):
         """A 409 means the address belongs to someone else. It must reach the
         caller as an error — an agent must never be able to attach itself to a
         stranger's account."""
-        register_fn = make_fake_register_fn(
+        fake_cls = make_fake_register_client(
             exception=HpsiMcpAuthError("That email is already registered.", status_code=409)
         )
 
-        with mock.patch.dict(os.environ, {}, clear=True):
-            with mock.patch.object(server, "_service", QuantFinanceService(register_fn=register_fn)):
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "existing_key"}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
                 result = server.register_account("someone-else@example.com")
 
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["status_code"], 409)
 
     def test_trims_surrounding_whitespace(self):
-        register_fn = make_fake_register_fn(result=self.PAYLOAD)
+        fake_cls = make_fake_register_client(result=self.PAYLOAD)
 
-        with mock.patch.dict(os.environ, {}, clear=True):
-            with mock.patch.object(server, "_service", QuantFinanceService(register_fn=register_fn)):
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "existing_key"}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(client_factory=fake_cls)):
                 server.register_account("  agent@example.com  ")
 
-        self.assertEqual(register_fn.calls, ["agent@example.com"])
+        self.assertEqual(FakeClient.last_instance.calls, [("register_account", "agent@example.com", {})])
 
 
 if __name__ == "__main__":

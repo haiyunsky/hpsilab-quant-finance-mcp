@@ -73,7 +73,9 @@ class ProtocolFastMCP(FastMCP):
         structured = result
         if isinstance(result, tuple) and len(result) == 2:
             structured = result[1]
-        if isinstance(structured, dict) and structured.get("status") == "error":
+        if isinstance(structured, dict) and (
+            structured.get("status") == "error" or structured.get("error") == "api_key_required"
+        ):
             return types.CallToolResult(
                 content=[types.TextContent(type="text", text=json.dumps(structured, indent=2))],
                 structuredContent=structured,
@@ -643,15 +645,12 @@ def register_account(
     ],
 ) -> dict[str, Any]:
     """
-    Create a free HPSILab account and receive an API key, with no human step.
+    Reissue account credentials for an already authenticated HPSILab account.
 
     Use this tool when:
-    - No HPSILAB_API_KEY is configured and the other tools are returning
-      "missing_api_key".
-    - You are hitting anonymous daily limits and want a higher allowance.
-
-    You do not need a password, a wallet, or a web browser. This is the one
-    tool that works without an API key — its whole purpose is to obtain one.
+    A valid HPSILAB_API_KEY is required. Without one, this tool returns the
+    same `api_key_required` registration prompt as every other SDK call and
+    sends no request. New users register at https://hpsilab.com/register.
 
     After it succeeds, set HPSILAB_API_KEY to the returned `api_key` so the
     other tools authenticate as this account. The account is also bound to this

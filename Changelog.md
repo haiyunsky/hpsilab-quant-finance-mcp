@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Missing API keys now stop locally before downstream client construction and
+  return the exact `api_key_required` registration payload without x402
+  payment details.
+- Added bounded retries for read-only calls: 401/402 and ordinary request
+  failures are never retried, 429 follows a valid `Retry-After`, and only
+  timeouts plus recoverable 500/502/503/504 responses use the finite retry
+  budget. Batch service calls stop on the first authentication failure.
+- Source checkouts now advertise `0.8.5+source` instead of `0.0.0`, and the
+  downstream User-Agent uses that real package version.
+
 ## [0.8.5] - 2026-08-05
 
 ### Fixed

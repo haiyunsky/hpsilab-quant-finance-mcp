@@ -67,8 +67,7 @@ class ToolSchemaTests(unittest.TestCase):
     def test_protocol_error_adapter_preserves_structured_payload(self):
         result = asyncio.run(mcp.call_tool("analyze_stock", {"symbol": "NVDA"}))
         self.assertTrue(result.isError)
-        self.assertEqual(result.structuredContent["status"], "error")
-        self.assertEqual(result.structuredContent["error_code"], "missing_api_key")
+        self.assertEqual(result.structuredContent["error"], "api_key_required")
         self.assertEqual(json.loads(result.content[0].text), result.structuredContent)
 
 
@@ -99,7 +98,7 @@ class StdioProtocolTests(unittest.IsolatedAsyncioTestCase):
 
                 result = await session.call_tool("analyze_stock", {"symbol": "NVDA"})
                 self.assertTrue(result.isError)
-                self.assertEqual(result.structuredContent["error_code"], "missing_api_key")
+                self.assertEqual(result.structuredContent["error"], "api_key_required")
 
 
 class StreamableHttpTests(unittest.TestCase):
