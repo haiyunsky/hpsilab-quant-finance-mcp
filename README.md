@@ -1,4 +1,4 @@
-# HPSILab Quant Finance MCP
+# HPSILab Quant Finance MCP Server for Stock & Options Analytics
 
 <!-- mcp-name: io.github.haiyunsky/hpsilab-quant-finance-mcp -->
 
@@ -8,6 +8,7 @@ HPSILab is an open-source Python quantitative finance MCP server for research on
 
 > Research and educational use only. HPSILab does not provide investment advice and does not execute trades.
 
+[Website](https://hpsilab.com/) · [Get a Free API Key](https://hpsilab.com/register) · [Pricing](https://hpsilab.com/pricing) · [Python SDK](https://pypi.org/project/hpsilab-mcp/)
 [![PyPI](https://img.shields.io/pypi/v/hpsilab-quant-finance-mcp?label=PyPI)](https://pypi.org/project/hpsilab-quant-finance-mcp/)
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
