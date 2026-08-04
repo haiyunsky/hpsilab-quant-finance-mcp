@@ -114,26 +114,28 @@ pip install -U hpsilab-quant-finance-mcp
 
 Set the `HPSILAB_API_KEY` environment variable in the client's private configuration, then launch the console command `hpsilab-quant-finance-mcp`. The package delegates API transport to the separate `hpsilab-mcp` SDK and therefore still needs network access.
 
-### Jupyter or Colab example
+Add the installed stdio server to the MCP client's private configuration:
 
-```python
-!pip install -U hpsilab-quant-finance-mcp
-
-import getpass
-import os
-
-os.environ["HPSILAB_API_KEY"] = getpass.getpass("HPSILAB_API_KEY: ")
-
-import hpsilab_quant_finance_mcp
-from hpsilab_quant_finance_mcp import server
-
-print(hpsilab_quant_finance_mcp.__version__)
-
-result = server.get_ai_prediction("NVDA")
-print(result)
+```json
+{
+  "mcpServers": {
+    "hpsilab": {
+      "command": "hpsilab-quant-finance-mcp",
+      "env": {
+        "HPSILAB_API_KEY": "hpsi_your_key"
+      }
+    }
+  }
+}
 ```
 
-Enter the API key only in the hidden prompt. Set it before importing `server`; assigning `server.api_key` is not a supported authentication method.
+Then verify it through the MCP client:
+
+```text
+Use HPSILab to get the AI prediction for NVDA and summarize the model consensus.
+```
+
+The client discovers tools with MCP `tools/list` and invokes them with `tools/call`; direct Python function calls are not the MCP setup path.
 
 - [Client configuration: ChatGPT, Claude, Cursor, VS Code, Copilot, Continue, and Kimi](docs/client-setup.md)
 - [Authentication and API-key handling](docs/authentication.md)
