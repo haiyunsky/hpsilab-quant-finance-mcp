@@ -31,4 +31,3 @@ print(result)
 Set `HPSILAB_API_KEY` in the process environment before importing and calling the server. The public configuration is environment-based; there is no supported `server.api_key` assignment.
 
 Tool functions return dictionaries with stable status and error fields. Research responses also include a research disclaimer. Prefer MCP when an assistant or MCP host manages tool discovery; prefer the SDK when application code needs direct REST access.
-
