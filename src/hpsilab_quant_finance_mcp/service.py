@@ -233,7 +233,9 @@ class QuantFinanceService:
                     result = method(normalized_symbol, **kwargs)
                 break
             except HpsiMcpPaymentError as exc:
-                return error_payload("payment_required", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
+                return error_payload(
+                    "payment_required", str(exc), status_code=exc.status_code, symbol=normalized_symbol
+                )
             except HpsiMcpAuthError as exc:
                 return error_payload("http_error", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
             except HpsiMcpRateLimitError as exc:
