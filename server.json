@@ -14,7 +14,7 @@
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "hpsilab-quant-finance-mcp",
-      "version": "0.8.4",
+      "version": "0.8.5",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"
