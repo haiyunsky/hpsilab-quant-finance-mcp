@@ -82,7 +82,18 @@ Configure your client with the endpoint and bearer header shown above. See the c
 The local package delegates calculations to the HPSILab API through the `hpsilab-mcp` SDK, so it always requires network access. It also needs an API key for the nine analysis tools — but you do not need to obtain one beforehand: install the package, then call `register_account` (see [Getting an API key without leaving your client](#getting-an-api-key-without-leaving-your-client)).
 
 ```bash
-pip install hpsilab-quant-finance-mcp
+pip install -U hpsilab-quant-finance-mcp
+```
+
+Use your API key:
+
+```python
+from hpsilab_quant_finance_mcp import server
+
+server.api_key = "hpsi_xxxxxxxxxxxxxxxxx"
+
+result = server.get_iv_radar("NVDA")
+print(result)
 ```
 
 macOS or Linux:

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-08-04
+
+### Added
+
+- Added a Python SDK example showing how to configure `server.api_key` and call `get_iv_radar()`.
+
 ## [0.8.1] - 2026-08-03
 
 ### Fixed
