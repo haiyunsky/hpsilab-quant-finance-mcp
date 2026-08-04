@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.haiyunsky/hpsilab-quant-finance-mcp -->
 
-HPSILab brings structured quantitative research for US equities, ETFs, and supported options into ChatGPT, Claude, Cursor, VS Code, and other MCP clients. It combines stock signals, implied volatility, options positioning, Monte Carlo scenarios, backtests, risk checks, charts, and research reports behind a stable MCP interface. Connect once, ask in natural language, and receive machine-readable results that an assistant can compare and explain.
+HPSILab is an open-source Python quantitative finance MCP server for research on US equities, ETFs, and supported options. It brings stock signals, implied volatility, options analytics, Monte Carlo simulation, AI prediction, backtesting, and risk analysis into ChatGPT, Claude, Cursor, VS Code, and other MCP clients. Connect once, ask in natural language, and receive structured results that an assistant can compare and explain.
 
 [Get a Free API Key](https://hpsilab.com/register) · [Pricing](https://hpsilab.com/pricing) · [Python SDK](https://pypi.org/project/hpsilab-mcp/)
 

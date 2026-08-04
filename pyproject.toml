@@ -12,7 +12,7 @@ where = ["src"]
 [project]
 name = "hpsilab-quant-finance-mcp"
 version = "0.8.3"
-description = "HPSILab Quant finance MCP server for stock analysis, options analytics, implied volatility, Monte Carlo simulation, AI prediction, pre-trade risk scanning, research reports, chart generation, and backtesting."
+description = "Open-source Python quantitative finance MCP server for US stock and ETF research, options analytics, implied volatility, Monte Carlo simulation, AI prediction, backtesting, and risk analysis."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -25,14 +25,18 @@ keywords = [
     "model-context-protocol",
     "quantitative-finance",
     "financial-research",
+    "us-equities",
+    "etf-analysis",
     "stock-analysis",
     "options-analytics",
     "implied-volatility",
     "monte-carlo",
     "backtesting",
+    "risk-analysis",
     "ai-agent",
     "claude-mcp",
-    "cursor-mcp"
+    "cursor-mcp",
+    "chatgpt-mcp"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "name": "hpsilab-quant-finance-mcp",
-  "description": "HPSILab 9-tool quant finance MCP server for stock analysis, options analytics, implied volatility radar, Monte Carlo stock simulation, AI prediction signals, pre-trade risk scanning, backtesting, research reports, and chart visualization.",
+  "description": "HPSILab quantitative finance MCP server for US stocks, ETFs, options analytics, implied volatility, Monte Carlo simulation, AI prediction, backtesting, and risk analysis.",
   "repository": "https://github.com/haiyunsky/hpsilab-quant-finance-mcp",
   "homepage": "https://hpsilab.com",
   "license": "MIT",
@@ -17,14 +17,17 @@
     "mcp-server",
     "model-context-protocol",
     "stock-analysis",
+    "etf-analysis",
     "options-analytics",
     "implied-volatility",
     "monte-carlo",
     "quantitative-finance",
     "backtesting",
+    "risk-analysis",
     "ai-prediction",
     "financial-research",
     "claude-mcp",
-    "cursor-mcp"
+    "cursor-mcp",
+    "chatgpt-mcp"
   ]
 }

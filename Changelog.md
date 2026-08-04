@@ -24,9 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Corrected Python installation guidance to use
   `pip install -U hpsilab-quant-finance-mcp` and removed the unsupported
   `server.api_key` configuration pattern.
-- Public documentation now describes nine financial research tools. The code
-  still registers `register_account`; that implementation remains unchanged
-  and is not presented as the new-user onboarding path.
+- Public documentation describes nine financial research tools. The retained
+  `register_account` compatibility tool now directs new users to
+  `https://hpsilab.com/register`; users generate and manage keys in Settings.
 
 ## [0.8.2] - 2026-08-04
 
