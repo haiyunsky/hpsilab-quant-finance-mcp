@@ -11,6 +11,10 @@ HPSILab is an open-source Python quantitative finance MCP server for research on
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+Current package and server version: **0.8.7**. An unpackaged source checkout
+identifies itself as `0.8.7+source` so initialization metadata and outbound
+User-Agent values never fall back to `0.0.0`.
+
 ### Monte Carlo research example
 
 ![PLTR Monte Carlo scenario visualization](assets/pltr-monte-carlo-scenarios.png)
@@ -45,6 +49,30 @@ identify conflicting signals, and finish with a concise risk summary.
 ```
 
 All financial research tools require a valid API key. See [client setup](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md) and [authentication](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md) for details.
+
+If the key is missing, the package stops locally before constructing the
+downstream client or sending a request:
+
+```json
+{
+  "error": "api_key_required",
+  "message": "A free API key is required.",
+  "register_url": "https://hpsilab.com/register",
+  "docs_url": "https://hpsilab.com/developer/v2"
+}
+```
+
+401 and 402 responses are never retried. A 429 is retried only when it carries
+a valid `Retry-After`. Read-only calls use a finite retry budget for timeouts
+and recoverable 500/502/503/504 responses; artifact-producing calls are not
+automatically retried.
+
+The local SDK adapter also applies Free-tier safeguards per API key: 20
+requests per tool per UTC day, 100 total requests per UTC day, and 10 total
+requests per rolling minute. Anonymous callers have zero tool requests. Each
+actual downstream attempt, including a retry, consumes one local allowance.
+Counters are process-local; the hosted API remains authoritative across
+process restarts and machines.
 
 ## Quick start: Local stdio
 

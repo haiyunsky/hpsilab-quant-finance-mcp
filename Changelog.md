@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.7] - 2026-08-05
+
+### Added
+
+- Added process-local Free SDK quota safeguards per API-key digest: 20
+  requests per tool per UTC day, 100 total requests per UTC day, and 10 total
+  requests per rolling minute. Anonymous calls remain blocked before dispatch,
+  retries consume allowance, and local quota rejections send no request.
+
+## [0.8.6] - 2026-08-05
+
 ### Fixed
 
 - Missing API keys now stop locally before downstream client construction and
@@ -15,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   failures are never retried, 429 follows a valid `Retry-After`, and only
   timeouts plus recoverable 500/502/503/504 responses use the finite retry
   budget. Batch service calls stop on the first authentication failure.
-- Source checkouts now advertise `0.8.5+source` instead of `0.0.0`, and the
+- Source checkouts now advertise `0.8.6+source` instead of `0.0.0`, and the
   downstream User-Agent uses that real package version.
 
 ## [0.8.5] - 2026-08-05

@@ -25,6 +25,7 @@ from hpsilab_mcp import register as hpsilab_register
 
 from . import __version__
 from .auth import CredentialProvider, EnvironmentApiKeyProvider
+from .quota import FreeTierQuotaLimiter, QuotaExceeded
 
 DISCLAIMER = (
     "Research and educational output only. This is not investment advice, "
@@ -130,6 +131,23 @@ def error_payload(
     return payload
 
 
+def quota_exceeded_payload(violation: QuotaExceeded, *, symbol: str | None = None) -> dict[str, Any]:
+    """Map a local quota rejection to the shared structured error contract."""
+    scope = f" for {violation.tool}" if violation.tool else ""
+    return error_payload(
+        "rate_limited",
+        f"Free SDK quota exceeded{scope}: {violation.limit} requests per {violation.window}.",
+        status_code=429,
+        symbol=symbol,
+        details={
+            "limit": violation.limit,
+            "window": violation.window,
+            "retry_after_seconds": violation.retry_after_seconds,
+            **({"tool": violation.tool} if violation.tool else {}),
+        },
+    )
+
+
 def normalize_symbol(symbol: str) -> str:
     """Normalize and validate an exchange ticker at the service boundary."""
     if not isinstance(symbol, str):
@@ -183,6 +201,7 @@ class QuantFinanceService:
         register_fn: RegisterFn | Callable[..., dict[str, Any]] = hpsilab_register,
         max_retries: int = DEFAULT_MAX_RETRIES,
         sleep_fn: Callable[[float], None] = time.sleep,
+        quota_limiter: FreeTierQuotaLimiter | None = None,
     ) -> None:
         if not isinstance(max_retries, int) or isinstance(max_retries, bool) or max_retries < 0:
             raise ValueError("max_retries must be a non-negative integer.")
@@ -191,6 +210,7 @@ class QuantFinanceService:
         self._register_fn = register_fn
         self._max_retries = max_retries
         self._sleep = sleep_fn
+        self._quota_limiter = quota_limiter or FreeTierQuotaLimiter()
 
     def call(self, method_name: str, symbol: str, **kwargs: Any) -> dict[str, Any]:
         api_key = self._credential_provider.get_api_key()
@@ -204,6 +224,9 @@ class QuantFinanceService:
 
         retryable = method_name in RETRYABLE_METHODS
         for attempt in range(self._max_retries + 1):
+            violation = self._quota_limiter.check_and_consume(api_key, method_name)
+            if violation is not None:
+                return quota_exceeded_payload(violation, symbol=normalized_symbol)
             try:
                 with self._client_factory(api_key=api_key, headers={"User-Agent": USER_AGENT}) as client:
                     method = getattr(client, method_name)
@@ -284,6 +307,9 @@ class QuantFinanceService:
             )
 
         try:
+            violation = self._quota_limiter.check_and_consume(api_key, "register_account")
+            if violation is not None:
+                return quota_exceeded_payload(violation)
             with self._client_factory(api_key=api_key, headers={"User-Agent": USER_AGENT}) as client:
                 result = client.register_account(normalized_email)
             if not isinstance(result, dict):

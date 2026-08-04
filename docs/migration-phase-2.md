@@ -27,19 +27,20 @@ This is additive. Existing service fields and their nesting are unchanged. Consu
 
 ### Error output
 
-The existing structured error object is unchanged:
+The current missing-credential contract supersedes the earlier Phase 2
+`missing_api_key` envelope. No downstream request is sent:
 
 ```json
 {
-  "status": "error",
-  "error_code": "missing_api_key",
-  "message": "...",
-  "disclaimer": "...",
-  "symbol": "NVDA"
+  "error": "api_key_required",
+  "message": "A free API key is required.",
+  "register_url": "https://hpsilab.com/register",
+  "docs_url": "https://hpsilab.com/developer/v2"
 }
 ```
 
-At the MCP protocol layer, the result now also sets `isError: true`. Clients that previously checked only `structuredContent.status` continue to work; standards-aware clients can now detect and present a recoverable tool error directly.
+At the MCP protocol layer, the result also sets `isError: true`. Consumers
+should detect `structuredContent.error == "api_key_required"`.
 
 ### Transport options
 
@@ -64,4 +65,3 @@ Input validation, SDK dispatch, and output/error normalization moved to `QuantFi
 ## No action required
 
 Existing ChatGPT, Claude, VS Code, GitHub Copilot, Cursor, Continue, and Kimi configurations using `https://hpsilab.com/mcp` require no change.
-
