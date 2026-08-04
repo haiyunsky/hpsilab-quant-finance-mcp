@@ -39,7 +39,7 @@ Use HPSILab to analyze AAPL. Separate observed metrics from interpretation,
 identify conflicting signals, and finish with a concise risk summary.
 ```
 
-A valid API key is required for the hosted MCP connection and financial research calls. The header must be named `Authorization` and use the value `Bearer hpsi_your_key`. See [client setup](docs/client-setup.md) and [authentication](docs/authentication.md) for exact configuration and troubleshooting.
+A valid API key is required for the hosted MCP connection and financial research calls. The header must be named `Authorization` and use the value `Bearer hpsi_your_key`. See [client setup](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md) and [authentication](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md) for exact configuration and troubleshooting.
 
 ### What success looks like
 
@@ -76,7 +76,7 @@ The public product surface contains **9 financial research tools**.
 | `generate_stock_research_report` | Structured hosted research report | Creates an artifact; not idempotent |
 Research tools accept one exchange ticker such as `NVDA`, `SPY`, or `BRK.B`; company names are not accepted. Live results can change between calls. Artifact tools can consume quota and should not be retried automatically.
 
-Full inputs, outputs, side effects, and tool-selection guidance are in [docs/tools.md](docs/tools.md).
+Full inputs, outputs, side effects, and tool-selection guidance are in [docs/tools.md](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/tools.md).
 
 ## Copy-ready prompts
 
@@ -137,15 +137,15 @@ Use HPSILab to get the AI prediction for NVDA and summarize the model consensus.
 
 The client discovers tools with MCP `tools/list` and invokes them with `tools/call`; direct Python function calls are not the MCP setup path.
 
-- [Client configuration: ChatGPT, Claude, Cursor, VS Code, Copilot, Continue, and Kimi](docs/client-setup.md)
-- [Authentication and API-key handling](docs/authentication.md)
-- [Python SDK and direct Python usage](docs/python-sdk.md)
-- [Local stdio, source installation, and self-hosting](docs/self-hosting.md)
-- [Architecture](docs/architecture.md)
+- [Client configuration: ChatGPT, Claude, Cursor, VS Code, Copilot, Continue, and Kimi](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md)
+- [Authentication and API-key handling](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md)
+- [Python SDK and direct Python usage](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/python-sdk.md)
+- [Local stdio, source installation, and self-hosting](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/self-hosting.md)
+- [Architecture](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/architecture.md)
 
 ## Supported clients
 
-Official Remote MCP is the preferred path for ChatGPT, Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi when their current release supports Streamable HTTP and bearer credentials. Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi can also use local stdio where supported; ChatGPT connects to the hosted service. Client capabilities and UI labels evolve, so use the copy-ready configurations and troubleshooting notes in [docs/client-setup.md](docs/client-setup.md).
+Official Remote MCP is the preferred path for ChatGPT, Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi when their current release supports Streamable HTTP and bearer credentials. Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi can also use local stdio where supported; ChatGPT connects to the hosted service. Client capabilities and UI labels evolve, so use the copy-ready configurations and troubleshooting notes in [docs/client-setup.md](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md).
 
 ## Safety and license
 
