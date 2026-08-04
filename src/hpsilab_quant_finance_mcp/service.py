@@ -89,16 +89,20 @@ def normalize_ai_prediction_result(result: Any) -> dict[str, Any] | None:
     """Convert supported SDK prediction responses to a plain dictionary."""
     if isinstance(result, dict):
         return result
+    if isinstance(result, list):
+        if len(result) != 1:
+            return None
+        return normalize_ai_prediction_result(result[0])
     if isinstance(result, str):
         try:
             decoded = json.loads(result)
         except (TypeError, ValueError):
             return None
-        return decoded if isinstance(decoded, dict) else None
+        return normalize_ai_prediction_result(decoded)
     model_dump = getattr(result, "model_dump", None)
     if callable(model_dump):
         decoded = model_dump()
-        return decoded if isinstance(decoded, dict) else None
+        return normalize_ai_prediction_result(decoded)
     return None
 
 

@@ -42,6 +42,11 @@ class PredictionClient(FakeClient):
         return '{"symbol": "' + symbol + '", "prediction": "Up"}'
 
 
+class SingleItemListPredictionClient(FakeClient):
+    def get_ai_prediction(self, symbol):
+        return [{"symbol": symbol, "prediction": "Up"}]
+
+
 class ServiceTests(unittest.TestCase):
     def test_environment_provider_strips_whitespace(self):
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "  hpsi_test  "}, clear=True):
@@ -88,8 +93,21 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(result["prediction"], "Up")
         self.assertEqual(result["status"], "success")
 
+    def test_ai_prediction_accepts_single_object_list_response(self):
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
+            result = QuantFinanceService(client_factory=SingleItemListPredictionClient).call(
+                "get_ai_prediction", "nvda"
+            )
+
+        self.assertEqual(result["symbol"], "NVDA")
+        self.assertEqual(result["prediction"], "Up")
+        self.assertEqual(result["status"], "success")
+
     def test_ai_prediction_rejects_non_object_json_response(self):
         self.assertIsNone(normalize_ai_prediction_result('["NVDA"]'))
+
+    def test_ai_prediction_rejects_multiple_object_list_response(self):
+        self.assertIsNone(normalize_ai_prediction_result([{"symbol": "NVDA"}, {"symbol": "AAPL"}]))
 
 
 if __name__ == "__main__":
