@@ -139,7 +139,7 @@ The client discovers tools with MCP `tools/list` and invokes them with `tools/ca
 
 - [Client configuration: ChatGPT, Claude, Cursor, VS Code, Copilot, Continue, and Kimi](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md)
 - [Authentication and API-key handling](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md)
-- [Python SDK and direct Python usage](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/python-sdk.md)
+- [Python installation and direct usage](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/python-sdk.md)
 - [Local stdio, source installation, and self-hosting](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/self-hosting.md)
 - [Architecture](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/architecture.md)
 
