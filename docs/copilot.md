@@ -6,7 +6,7 @@ GitHub Copilot in VS Code uses VS Code's MCP server configuration. This guide fo
 
 1. Install a current VS Code release and the current GitHub Copilot/Chat experience.
 2. Sign in to GitHub and confirm that Agent mode is available under your plan or organization policy.
-3. Create an HPSILab API key at [hpsilab.com](https://hpsilab.com).
+3. [Register](https://hpsilab.com/register), sign in, and generate an API key in Settings.
 
 For local stdio, install `uv` so `uvx` is available.
 

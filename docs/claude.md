@@ -4,7 +4,7 @@ The hosted Streamable HTTP endpoint is recommended for Claude Code. Local stdio 
 
 ## Installation
 
-Install a current Claude Code release, or use a Claude surface that supports custom MCP servers. Create an API key at [hpsilab.com](https://hpsilab.com).
+Install a current Claude Code release, or use a Claude surface that supports custom MCP servers. [Register](https://hpsilab.com/register), sign in, and generate an API key in Settings.
 
 For local stdio, also install [`uv`](https://docs.astral.sh/uv/) or the Python package:
 
@@ -100,4 +100,3 @@ Ask for a narrower dedicated tool instead of `analyze_stock` or a full report. C
 The header value must be `Bearer hpsi_...`. For local stdio, the environment variable must be named exactly `HPSILAB_API_KEY`.
 
 See Anthropic's current [Claude Code MCP documentation](https://docs.anthropic.com/en/docs/claude-code/mcp) for client-level configuration changes.
-

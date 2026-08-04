@@ -9,7 +9,7 @@ flowchart LR
     C["MCP clients"]
     STDIO["stdio transport"]
     HTTP["Streamable HTTP transport"]
-    MCP["ProtocolFastMCP<br/>nine stable tools"]
+    MCP["ProtocolFastMCP<br/>10 registered tools; 9 publicly documented"]
     SERVICE["QuantFinanceService<br/>validation · errors · output normalization"]
     CREDS["CredentialProvider"]
     ENV["Environment API key"]

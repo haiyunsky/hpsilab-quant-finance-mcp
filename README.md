@@ -2,321 +2,130 @@
 
 <!-- mcp-name: io.github.haiyunsky/hpsilab-quant-finance-mcp -->
 
-**Production-focused quantitative research for US stocks and options, available directly inside ChatGPT, Claude, VS Code, GitHub Copilot, Cursor, Continue, Kimi, and other MCP clients.**
+HPSILab brings structured quantitative research for US equities, ETFs, and supported options into ChatGPT, Claude, Cursor, VS Code, and other MCP clients. It combines stock signals, implied volatility, options positioning, Monte Carlo scenarios, backtests, risk checks, charts, and research reports behind a stable MCP interface. Connect once, ask in natural language, and receive machine-readable results that an assistant can compare and explain.
 
-HPSILab combines stock signals, implied volatility, options positioning, Monte Carlo scenarios, strategy backtests, pre-trade risk checks, charts, and research reports behind ten purpose-built MCP tools. Ask a question in natural language and receive structured data that an assistant can explain, compare, and use in a larger research workflow.
+[Get a Free API Key](https://hpsilab.com/register) · [Pricing](https://hpsilab.com/pricing) · [Python SDK](https://pypi.org/project/hpsilab-mcp/)
 
-> Research and educational use only. HPSILab does not execute trades and does not provide investment advice.
+> Research and educational use only. HPSILab does not provide investment advice and does not execute trades.
 
 [![PyPI](https://img.shields.io/pypi/v/hpsilab-quant-finance-mcp?label=PyPI)](https://pypi.org/project/hpsilab-quant-finance-mcp/)
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![MCP](https://img.shields.io/badge/MCP-Official%20Registry-blue)](https://registry.modelcontextprotocol.io/)
 
-**Hosted endpoint:** `https://hpsilab.com/mcp`
+## Quick start: Official Remote MCP
 
-```text
-Analyze NVDA with HPSILab. Summarize the directional signal, IV regime,
-options pressure, 30-day Monte Carlo range, and the three most important risks.
+The hosted Streamable HTTP service is the recommended setup. It requires no local Python installation and uses one official endpoint:
+
+```json
+{
+  "mcpServers": {
+    "hpsilab": {
+      "type": "http",
+      "url": "https://hpsilab.com/mcp",
+      "headers": {
+        "Authorization": "Bearer hpsi_your_key"
+      }
+    }
+  }
+}
 ```
 
-[Quick start](#quick-start) · [Client guides](#supported-mcp-clients) · [Prompt library](#example-prompts) · [Tool reference](#tools)
+1. [Register a free account](https://hpsilab.com/register), sign in, and generate an API key from Settings.
+2. Replace `hpsi_your_key` in your client's private MCP configuration. Never commit or paste a real key into chat.
+3. Connect the server and verify it with:
 
-<!-- Screenshot placeholder: replace with a real client conversation showing an NVDA analysis. -->
-> **Screenshot placeholder — end-to-end stock analysis in an MCP client**
+```text
+Use HPSILab to analyze AAPL. Separate observed metrics from interpretation,
+identify conflicting signals, and finish with a concise risk summary.
+```
 
-## Why this server exists
+A valid API key is required for the hosted MCP connection and financial research calls. The header must be named `Authorization` and use the value `Bearer hpsi_your_key`. See [client setup](docs/client-setup.md) and [authentication](docs/authentication.md) for exact configuration and troubleshooting.
 
-General-purpose assistants can explain finance, but they should not invent live metrics or silently mix data from incompatible sources. HPSILab provides a narrow, explicit tool contract for quantitative research:
+### What success looks like
 
-- structured outputs instead of prose that must be scraped;
-- specialized tools for volatility, options positioning, probability, backtests, and risk;
-- consistent ticker validation and machine-readable errors;
-- clear read-only and side-effect annotations for MCP clients;
-- the same research surface through hosted Streamable HTTP and local stdio transports.
+Your client should make the nine publicly documented financial research tools available. A successful first call returns a structured dictionary containing the requested analysis, a status, and the research disclaimer—not an unstructured page that the client must scrape.
 
-The project is designed for investors, options researchers, quantitative developers, financial research teams, and agent builders who need evidence-rich analysis—not automated trading.
+If the first call fails, check these three items before changing anything else:
 
-## Features
+1. The endpoint is exactly the one shown in the configuration above.
+2. The authorization value begins with `Bearer ` and contains a currently valid key.
+3. The input is an exchange ticker such as `AAPL`, not a company name such as `Apple`.
 
-- **Unified stock analysis** — combine multiple quantitative signals into a bull, bear, or neutral view.
-- **AI prediction** — inspect next-session direction, probability, confidence, regime, and model consensus.
-- **Implied-volatility radar** — evaluate ATM IV, IV rank, percentile, skew, and volatility regime.
-- **Options pressure** — identify max pain, gamma walls, expected moves, squeeze targets, and strike concentrations.
-- **Monte Carlo simulation** — explore 30-day price distributions and downside probabilities.
-- **Strategy backtests** — compare returns, Sharpe and Sortino ratios, drawdown, and win rate.
-- **Pre-trade risk scan** — review volatility, beta, VaR, drawdown, sizing, exposure, and correlation checks.
-- **Research artifacts** — generate structured reports and hosted chart images.
-- **Self-service onboarding** — an agent can register its own account and obtain an API key without a password, a wallet, or a web form.
-- **Agent-friendly contract** — typed inputs, structured dictionaries, stable tool names, and explicit MCP annotations.
+## Why HPSILab
 
-## Quick Start
+General-purpose assistants can explain financial concepts, but they should not invent quantitative metrics or silently combine incompatible sources. HPSILab gives assistants a narrow research contract with typed inputs, structured outputs, consistent ticker validation, machine-readable errors, and accurate MCP safety annotations.
 
-The hosted Streamable HTTP endpoint is the recommended path. It requires no local Python installation and always exposes the current server version.
+The tool surface covers complementary parts of a research workflow: broad signal aggregation, model consensus, volatility context, options-derived levels, probabilistic scenarios, historical strategy behavior, and pre-trade risk. Dedicated tools let the client request only the evidence needed for a question, while report and chart tools create explicit artifacts when a reusable deliverable is required.
 
-1. Create an account at [hpsilab.com](https://hpsilab.com) and generate an API key in Settings.
-2. Add this remote MCP server to your client:
+The current market scope is US-listed equities, ETFs, and supported options data. Coverage and account limits are governed by the hosted service and selected plan. HPSILab does not connect to a brokerage and cannot place, route, modify, or cancel orders.
 
-   ```text
-   https://hpsilab.com/mcp
-   ```
+## Tools
 
-3. Send the header `Authorization: Bearer hpsi_your_key` if the client supports custom headers.
-4. Ask:
+The public product surface contains **9 financial research tools**.
 
-   ```text
-   Use HPSILab to analyze AAPL. Separate observed metrics from interpretation,
-   identify conflicting signals, and finish with a concise risk summary.
-   ```
+| Tool | What it returns | Behavior |
+| --- | --- | --- |
+| `analyze_stock` | Aggregate directional and quantitative stock analysis | Read-only |
+| `get_ai_prediction` | Next-session prediction, confidence, and model consensus | Read-only |
+| `get_iv_radar` | IV level, rank, percentile, skew, and regime | Read-only |
+| `get_option_pressure` | Max pain, gamma walls, expected move, and pressure zones | Read-only |
+| `get_monte_carlo` | 30-day simulated distribution and probabilities | Read-only |
+| `get_equity_curve` | Strategy backtests and risk-adjusted performance | Read-only |
+| `get_pretrade_risk_scan` | Position, exposure, correlation, and risk checks | Read-only |
+| `generate_stock_images` | Hosted stock and options chart artifacts | Creates an artifact; not idempotent |
+| `generate_stock_research_report` | Structured hosted research report | Creates an artifact; not idempotent |
+Research tools accept one exchange ticker such as `NVDA`, `SPY`, or `BRK.B`; company names are not accepted. Live results can change between calls. Artifact tools can consume quota and should not be retried automatically.
 
-**An API key is required** — the hosted endpoint no longer serves any tool anonymously. Don't have one yet? Skip the sign-up page: call the `register_account` tool (available on the hosted endpoint and in this package alike) with an email address and it hands back a real `hpsi_` key immediately, no password, wallet, or web form. The account is bound to the caller server-side, so later calls from the same client are recognised even before you've set `HPSILAB_API_KEY`. It starts unverified (a reduced daily allowance) until you confirm the emailed link, which unlocks the full Free plan. See [Getting an API key without leaving your client](#getting-an-api-key-without-leaving-your-client) below.
+Full inputs, outputs, side effects, and tool-selection guidance are in [docs/tools.md](docs/tools.md).
 
-## Installation
+## Copy-ready prompts
 
-### Option A: hosted MCP service (recommended)
+### Claude
 
-Configure your client with the endpoint and bearer header shown above. See the client-specific guides below for exact steps.
+```text
+Use HPSILab to analyze NVDA. Summarize the directional signal, AI model
+consensus, IV regime, options pressure, 30-day Monte Carlo range, and the
+three most important risks. Distinguish tool data from interpretation.
+```
 
-### Option B: local stdio server
+### Cursor
 
-The local package delegates calculations to the HPSILab API through the `hpsilab-mcp` SDK, so it always requires network access. It also needs an API key for the nine analysis tools — but you do not need to obtain one beforehand: install the package, then call `register_account` (see [Getting an API key without leaving your client](#getting-an-api-key-without-leaving-your-client)).
+```text
+Use HPSILab's IV radar and option-pressure tools for SPY. Compare IV rank,
+percentile, skew, expected move, max pain, gamma wall, and pressure zones.
+Return a compact table and do not recommend a trade.
+```
+
+### ChatGPT
+
+```text
+Run the HPSILab pre-trade risk scan for TSLA. Explain every warning or failed
+check, preserve unavailable fields as unavailable, and quote the returned
+reason instead of guessing. Do not execute or recommend a trade.
+```
+
+## Other installation paths
+
+Official Remote MCP is the default. For a client that only supports local stdio:
 
 ```bash
 pip install -U hpsilab-quant-finance-mcp
 ```
 
-Use your API key:
+Set the `HPSILAB_API_KEY` environment variable in the client's private configuration, then launch the console command `hpsilab-quant-finance-mcp`. The package delegates API transport to the separate `hpsilab-mcp` SDK and therefore still needs network access.
 
-```python
-from hpsilab_quant_finance_mcp import server
+- [Client configuration: ChatGPT, Claude, Cursor, VS Code, Copilot, Continue, and Kimi](docs/client-setup.md)
+- [Authentication and API-key handling](docs/authentication.md)
+- [Python SDK and direct Python usage](docs/python-sdk.md)
+- [Local stdio, source installation, and self-hosting](docs/self-hosting.md)
+- [Architecture](docs/architecture.md)
 
-server.api_key = "hpsi_xxxxxxxxxxxxxxxxx"
+## Supported clients
 
-result = server.get_iv_radar("NVDA")
-print(result)
-```
+Official Remote MCP is the preferred path for ChatGPT, Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi when their current release supports Streamable HTTP and bearer credentials. Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi can also use local stdio where supported; ChatGPT connects to the hosted service. Client capabilities and UI labels evolve, so use the copy-ready configurations and troubleshooting notes in [docs/client-setup.md](docs/client-setup.md).
 
-macOS or Linux:
+## Safety and license
 
-```bash
-export HPSILAB_API_KEY=hpsi_your_key
-hpsilab-quant-finance-mcp
-```
+HPSILab is for research and education only. Outputs may be incomplete, delayed, or wrong and are not investment, financial, or trading advice. The MCP server has no brokerage connectivity, order entry, or trade-execution capability.
 
-Windows PowerShell:
-
-```powershell
-$env:HPSILAB_API_KEY = "hpsi_your_key"
-hpsilab-quant-finance-mcp
-```
-
-For clients that support `uvx`, use:
-
-```text
-command: uvx
-args: hpsilab-quant-finance-mcp
-environment: HPSILAB_API_KEY=hpsi_your_key
-```
-
-### Option C: install from source
-
-```bash
-git clone https://github.com/haiyunsky/hpsilab-quant-finance-mcp.git
-cd hpsilab-quant-finance-mcp
-python -m venv .venv
-python -m pip install -e .
-```
-
-Set `HPSILAB_API_KEY`, then run `hpsilab-quant-finance-mcp`.
-
-### Local Streamable HTTP
-
-The same ten tools can be served locally over the standard HTTP transport without duplicating business logic:
-
-```bash
-hpsilab-quant-finance-mcp --transport streamable-http --host 127.0.0.1 --port 8000
-```
-
-Connect a client to `http://127.0.0.1:8000/mcp`. This development mode uses the process-level `HPSILAB_API_KEY`; keep it bound to loopback unless you have configured production TLS, authentication, allowed hosts/origins, and trusted proxy behavior.
-
-### Python REST SDK
-
-Applications that need direct Python/REST access rather than MCP should use the separate [`hpsilab-mcp`](https://pypi.org/project/hpsilab-mcp/) package. The REST SDK and this MCP server are related products, but they are not interchangeable transports.
-
-## Supported MCP clients
-
-| Client | Hosted HTTP | Local stdio | Guide |
-| --- | :---: | :---: | --- |
-| ChatGPT | Yes | No | [ChatGPT setup](docs/chatgpt.md) |
-| Claude / Claude Code / Claude Desktop | Yes | Yes | [Claude setup](docs/claude.md) |
-| VS Code | Yes | Yes | [VS Code setup](docs/vscode.md) |
-| GitHub Copilot | Yes | Yes | [Copilot setup](docs/copilot.md) |
-| Cursor | Yes | Yes | [Cursor setup](docs/cursor.md) |
-| Continue | Yes | Yes | Use the client's MCP configuration UI with the endpoint above |
-| Kimi Code | Yes | Yes | Use Streamable HTTP or `uvx` with the settings above |
-
-MCP capabilities and configuration formats evolve. Use the linked guides and your client's current documentation if a UI label has changed.
-
-## Example prompts
-
-### Fast stock research
-
-```text
-Use HPSILab to analyze MSFT. Give me the overall signal, confidence, strongest
-bullish and bearish evidence, and any disagreement between the underlying models.
-```
-
-### Options and volatility
-
-```text
-Use HPSILab to evaluate TSLA options. Compare IV rank and percentile with the
-expected move, max pain, gamma wall, and pressure zones. Do not recommend a trade.
-```
-
-### Risk-first workflow
-
-```text
-Run the HPSILab pre-trade risk scan for NVDA. Explain every warning or failed
-check, show how portfolio exposure changes, and state when data is unavailable.
-```
-
-More copy-ready workflows:
-
-- [Stock analysis](examples/stock_analysis.md)
-- [Options and volatility](examples/options.md)
-- [Earnings research](examples/earnings.md)
-- [Portfolio research](examples/portfolio.md)
-- [Risk scans](examples/risk_scan.md)
-
-## Screenshots
-
-The following placeholders identify the product views that should be captured before the next documentation release. Screenshots must use non-sensitive demo data and must not expose an API key or account information.
-
-<!-- Screenshot placeholder: multi-signal stock analysis response. -->
-> **Placeholder 1 — multi-signal stock analysis response**
-
-<!-- Screenshot placeholder: IV radar and options-pressure comparison. -->
-> **Placeholder 2 — implied volatility and options positioning**
-
-<!-- Screenshot placeholder: pre-trade risk scan with warnings. -->
-> **Placeholder 3 — risk scan and portfolio impact**
-
-## Architecture
-
-```mermaid
-flowchart LR
-    C["MCP client<br/>ChatGPT · Claude · VS Code · Cursor · Continue · Kimi"]
-    R["Hosted Streamable HTTP<br/>https://hpsilab.com/mcp"]
-    S["Local stdio server<br/>hpsilab-quant-finance-mcp"]
-    SDK["hpsilab-mcp Python SDK"]
-    API["HPSILab quantitative API"]
-    Q["Market data · IV engine · models<br/>simulation · backtests · risk"]
-
-    C --> R
-    C --> S
-    S --> SDK
-    R --> API
-    SDK --> API
-    API --> Q
-```
-
-This repository owns the MCP interface and its stdio/Streamable HTTP adapters. The `hpsilab-mcp` SDK owns hosted REST paths and downstream API transport behavior used by the shared service layer.
-
-Detailed engineering references:
-
-- [Architecture and authentication boundaries](docs/architecture.md)
-- [MCP protocol compatibility review](docs/protocol-compatibility.md)
-- [Phase 2 migration notes](docs/migration-phase-2.md)
-
-## Tools
-
-Tool names are part of the public compatibility contract and are not renamed casually.
-
-| Tool | Purpose | Side-effect profile |
-| --- | --- | --- |
-| `analyze_stock` | Aggregate directional and quantitative stock analysis | Read-only, idempotent |
-| `get_ai_prediction` | Next-session model prediction and consensus | Read-only, idempotent |
-| `get_iv_radar` | IV level, rank, percentile, skew, and regime | Read-only, idempotent |
-| `get_option_pressure` | Max pain, gamma walls, expected move, and pressure zones | Read-only, idempotent |
-| `get_monte_carlo` | Thirty-day simulated price distribution and probabilities | Read-only, idempotent |
-| `get_equity_curve` | Strategy backtests and risk-adjusted performance | Read-only, idempotent |
-| `get_pretrade_risk_scan` | Position, portfolio exposure, and correlation risk checks | Read-only, idempotent |
-| `generate_stock_images` | Create hosted chart artifacts | Creates artifacts; not idempotent |
-| `generate_stock_research_report` | Create a structured hosted research report | Creates an artifact; not idempotent |
-| `register_account` | Create a free account and receive an API key | Creates an account; not idempotent |
-
-The nine analysis tools each accept an exchange ticker such as `NVDA`, `AAPL`, `SPY`, or `BRK.B`. Company names are not accepted in place of tickers. Live outputs can change between calls. Artifact-producing tools may consume quota, and generated image URLs can expire.
-
-### Getting an API key without leaving your client
-
-Every analysis tool requires `HPSILAB_API_KEY` and returns a `missing_api_key`
-error without one. `register_account` is the exception, and the reason it
-exists: it is the one tool that works *without* a key, because its purpose is
-to obtain one.
-
-```
-register_account("you@example.com")
-```
-
-No password, no wallet, no web form. It returns a real `hpsi_` key — set it as
-`HPSILAB_API_KEY` and the other tools authenticate as that account.
-
-The account is created **unverified**, which keeps the anonymous daily
-allowance until the emailed link is confirmed; confirming it unlocks the full
-Free plan. Use an address someone actually reads.
-
-Calling again returns the same account and a fresh key rather than creating a
-second one, so it is safe to retry if a key was lost. An address that already
-belongs to a different account is refused — you cannot attach yourself to
-someone else's account by guessing their email.
-
-## FAQ
-
-### Is HPSILab a trading bot?
-
-No. It provides quantitative research data and analysis tools. It does not place, route, or manage orders.
-
-### Do I need an API key?
-
-For the nine analysis tools, yes: the local stdio package reads `HPSILAB_API_KEY`, and the hosted endpoint requires one too — there is no free anonymous access on either transport.
-
-But you do not need to have one already. `register_account` is available on **both** the local package and the hosted endpoint, and it is the one tool that works without a key — call it with an email address and it returns a real key, with no password, wallet, or web form. An agent can do this unattended.
-
-### What markets are supported?
-
-The current tool surface is designed for US-listed equities, ETFs, and their supported options data. Coverage is governed by the hosted service and account tier.
-
-### Why did the server reject a company name?
-
-Tools require an exchange ticker. Use `NVDA`, not `NVIDIA`; use `BRK.B` where the exchange ticker includes a class suffix.
-
-### Why are exposure or correlation fields empty?
-
-Those sections depend on an existing tracked watchlist or portfolio. When unavailable, the response includes `available: false` and a `reason`; clients should surface that reason instead of guessing.
-
-### Why did a chart or report call run twice?
-
-Artifact-producing tools are deliberately marked non-idempotent. Repeating a call can create another artifact or consume quota. Review client approval prompts before retrying.
-
-### How do I troubleshoot a connection?
-
-Confirm the endpoint is exactly `https://hpsilab.com/mcp`, verify the bearer header or `HPSILAB_API_KEY`, restart the MCP server after configuration changes, and inspect your client's MCP logs. Client-specific checks are in the linked setup guides.
-
-### Is the output investment advice?
-
-No. Outputs are for research and education and can be incomplete, delayed, or wrong. Independently verify material facts and consult a qualified professional where appropriate.
-
-## Contributing
-
-Contributions that improve reliability, interoperability, tests, documentation, and developer experience are welcome.
-
-1. Read [AGENTS.md](AGENTS.md) for the repository contract.
-2. Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, testing, and pull-request expectations.
-3. Open an issue before proposing a new tool or any public schema change.
-4. Keep changes backward compatible and include tests for observable behavior changes.
-
-Please report vulnerabilities privately according to [SECURITY.md](SECURITY.md), and follow the [Code of Conduct](CODE_OF_CONDUCT.md).
-
-## License
-
-[MIT](LICENSE) © 2026 Haiyun Hu
+Licensed under the [MIT License](LICENSE). Contributions are welcome; read [AGENTS.md](AGENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md) before proposing public schema changes.

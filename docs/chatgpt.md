@@ -8,7 +8,7 @@ ChatGPT connects to the hosted HPSILab Streamable HTTP server. It does not launc
 
 1. Use ChatGPT on the web with a plan and workspace that supports custom MCP apps.
 2. Ask a workspace administrator to enable developer mode if your account does not expose it.
-3. Create a HPSILab account and API key at [hpsilab.com](https://hpsilab.com).
+3. [Register a HPSILab account](https://hpsilab.com/register), sign in, and generate an API key in Settings.
 
 ## Configuration
 
@@ -22,10 +22,10 @@ ChatGPT connects to the hosted HPSILab Streamable HTTP server. It does not launc
    ```
 
 5. Select the authentication option supported by your workspace. If the form permits a static bearer token, use the HPSILab API key as the bearer credential. Never paste it into a chat message.
-6. Select **Scan Tools**, review the nine discovered tools and their annotations, then create the app.
+6. Select **Scan Tools**, review the publicly documented financial research tools and their annotations, then create the app.
 7. Open a new chat and enable the draft/custom HPSILab app from the tools menu.
 
-The hosted endpoint may expose a rate-limited anonymous subset. Authenticated access is recommended for predictable quotas and account-dependent tools.
+A valid HPSILab API key is required. Configure it as the bearer credential and never paste it into a chat message.
 
 ## Example prompts
 
@@ -56,7 +56,7 @@ Custom MCP apps may require a supported plan, web access, an administrator setti
 
 - Confirm the endpoint is exactly `https://hpsilab.com/mcp`.
 - Confirm the credential is a bearer token and does not include extra quotes or whitespace.
-- Retry without authentication only to test whether the anonymous endpoint is reachable.
+- Confirm that a valid HPSILab API key is configured as the bearer credential.
 - Ask the administrator whether workspace networking or app policies block third-party MCP servers.
 
 ### ChatGPT does not call HPSILab
@@ -69,4 +69,3 @@ Custom MCP apps may require a supported plan, web access, an administrator setti
 ### A report or image call asks for confirmation
 
 `generate_stock_images` and `generate_stock_research_report` create hosted artifacts and are non-idempotent. Review the action and quota implications before approving or retrying.
-

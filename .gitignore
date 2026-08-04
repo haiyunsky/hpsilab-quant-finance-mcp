@@ -13,6 +13,11 @@ docs/*
 !docs/architecture.md
 !docs/protocol-compatibility.md
 !docs/migration-phase-2.md
+!docs/tools.md
+!docs/client-setup.md
+!docs/python-sdk.md
+!docs/authentication.md
+!docs/self-hosting.md
 uv.lock
 .env
 .env.*

@@ -6,7 +6,7 @@ VS Code can connect to the hosted HPSILab endpoint or start the local stdio pack
 
 1. Install a current VS Code release with MCP and Chat/Agent support.
 2. Sign in to the provider used by your Chat experience.
-3. Create an HPSILab API key at [hpsilab.com](https://hpsilab.com).
+3. [Register](https://hpsilab.com/register), sign in, and generate an API key in Settings.
 4. For local stdio, install `uv` so `uvx` is available.
 
 ## Configuration
@@ -105,4 +105,3 @@ Do not put the real key in `.vscode/mcp.json`. Keep the input-variable configura
 Enable only the relevant HPSILab tools for the request, or explicitly name a tool with `#`. A smaller active tool set improves selection accuracy.
 
 See Microsoft's current [VS Code MCP server guide](https://code.visualstudio.com/docs/agent-customization/mcp-servers).
-

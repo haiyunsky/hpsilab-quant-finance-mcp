@@ -5,7 +5,7 @@ Cursor can connect to the hosted Streamable HTTP endpoint or start the local std
 ## Installation
 
 1. Install a current Cursor release with MCP support.
-2. Create an API key at [hpsilab.com](https://hpsilab.com).
+2. [Register](https://hpsilab.com/register), sign in, and generate an API key in Settings.
 3. For local stdio, install `uv` so `uvx` is available.
 
 ## Configuration
@@ -45,7 +45,7 @@ Store the real key only in a private user-level configuration. Do not commit it 
 }
 ```
 
-After saving, refresh or restart MCP servers and confirm that nine HPSILab tools are visible.
+After saving, refresh the MCP server and confirm that the publicly documented financial research tools are visible.
 
 ## Example prompts
 
@@ -84,4 +84,3 @@ Install `uv`, restart Cursor so it receives the updated `PATH`, or use the absol
 ### Cursor repeatedly calls an artifact tool
 
 Stop the run and instruct the agent not to retry `generate_stock_images` or `generate_stock_research_report` without confirmation. Both are non-idempotent.
-

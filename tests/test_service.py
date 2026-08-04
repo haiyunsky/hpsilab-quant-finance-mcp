@@ -12,6 +12,7 @@ from hpsilab_quant_finance_mcp.service import (
     DISCLAIMER,
     QuantFinanceService,
     error_payload,
+    normalize_ai_prediction_result,
     normalize_success_payload,
     normalize_symbol,
 )
@@ -34,6 +35,11 @@ class FakeClient:
 class NonObjectClient(FakeClient):
     def analyze_stock(self, symbol):
         return [symbol]
+
+
+class PredictionClient(FakeClient):
+    def get_ai_prediction(self, symbol):
+        return '{"symbol": "' + symbol + '", "prediction": "Up"}'
 
 
 class ServiceTests(unittest.TestCase):
@@ -73,6 +79,17 @@ class ServiceTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["error_code"], "invalid_response")
+
+    def test_ai_prediction_accepts_sdk_json_object_response(self):
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
+            result = QuantFinanceService(client_factory=PredictionClient).call("get_ai_prediction", "nvda")
+
+        self.assertEqual(result["symbol"], "NVDA")
+        self.assertEqual(result["prediction"], "Up")
+        self.assertEqual(result["status"], "success")
+
+    def test_ai_prediction_rejects_non_object_json_response(self):
+        self.assertIsNone(normalize_ai_prediction_result('["NVDA"]'))
 
 
 if __name__ == "__main__":

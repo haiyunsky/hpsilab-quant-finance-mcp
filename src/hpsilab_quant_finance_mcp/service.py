@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Callable
 from typing import Any, Protocol
@@ -84,6 +85,23 @@ def normalize_success_payload(result: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def normalize_ai_prediction_result(result: Any) -> dict[str, Any] | None:
+    """Convert supported SDK prediction responses to a plain dictionary."""
+    if isinstance(result, dict):
+        return result
+    if isinstance(result, str):
+        try:
+            decoded = json.loads(result)
+        except (TypeError, ValueError):
+            return None
+        return decoded if isinstance(decoded, dict) else None
+    model_dump = getattr(result, "model_dump", None)
+    if callable(model_dump):
+        decoded = model_dump()
+        return decoded if isinstance(decoded, dict) else None
+    return None
+
+
 class QuantFinanceService:
     """Validate input, call the official SDK, and normalize service results."""
 
@@ -122,6 +140,8 @@ class QuantFinanceService:
             with self._client_factory(api_key=api_key) as client:
                 method = getattr(client, method_name)
                 result = method(normalized_symbol, **kwargs)
+            if method_name == "get_ai_prediction":
+                result = normalize_ai_prediction_result(result)
             if not isinstance(result, dict):
                 return error_payload(
                     "invalid_response",

@@ -13,7 +13,7 @@ No public tool was renamed, removed, or split.
 | Area | Status | Implementation and findings |
 | --- | --- | --- |
 | `initialize` | Compliant | SDK negotiates protocol version, returns server name/version/instructions and capabilities, then accepts `notifications/initialized`. Tests verify advertised package version over stdio and HTTP. |
-| `tools/list` | Compliant | Nine stable tools, flat object inputs, parameter descriptions, valid JSON Schema, output schemas, and explicit boolean annotations. Catalog is static, so `listChanged` is false. |
+| `tools/list` | Compliant | The code currently registers 10 tools, while product documentation publicly describes 9 financial research tools. Inputs are flat objects with parameter descriptions, valid JSON Schema, output schemas, and explicit boolean annotations. Catalog is static, so `listChanged` is false. |
 | `tools/call` | Compliant | Successful dictionaries produce both serialized text and `structuredContent`. Structured service failures additionally return `isError: true`. Unknown tools and malformed inputs are handled by the SDK as protocol/tool validation errors. |
 | `resources/list` | Compliant, empty | The SDK advertises the resources capability with `subscribe: false` and `listChanged: false`; the list is empty. No resource URI contract is currently needed. |
 | `prompts/list` | Compliant, empty | The SDK advertises prompts with `listChanged: false`; the list is empty. Copy-ready user prompts remain documentation rather than a second runtime API. |
@@ -79,4 +79,3 @@ The protocol tests separately exercise initialize, list operations, tool errors,
 - [Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
 - [Authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
 - [Official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
-
