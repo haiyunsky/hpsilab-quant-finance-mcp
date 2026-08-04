@@ -41,6 +41,45 @@ identify conflicting signals, and finish with a concise risk summary.
 
 A valid API key is required for the hosted MCP connection and financial research calls. The header must be named `Authorization` and use the value `Bearer hpsi_your_key`. See [client setup](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md) and [authentication](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md) for exact configuration and troubleshooting.
 
+## Quick start: Local stdio
+
+Official Remote MCP is the default. For a client that only supports local stdio:
+
+```bash
+pip install -U hpsilab-quant-finance-mcp
+```
+
+Set the `HPSILAB_API_KEY` environment variable in the client's private configuration, then launch the console command `hpsilab-quant-finance-mcp`. The package delegates API transport to the separate `hpsilab-mcp` SDK and therefore still needs network access.
+
+Add the installed stdio server to the MCP client's private configuration:
+
+```json
+{
+  "mcpServers": {
+    "hpsilab": {
+      "command": "hpsilab-quant-finance-mcp",
+      "env": {
+        "HPSILAB_API_KEY": "hpsi_your_key"
+      }
+    }
+  }
+}
+```
+
+Then verify it through the MCP client:
+
+```text
+Use HPSILab to get the AI prediction for NVDA and summarize the model consensus.
+```
+
+The client discovers tools with MCP `tools/list` and invokes them with `tools/call`; direct Python function calls are not the MCP setup path.
+
+- [Client configuration: ChatGPT, Claude, Cursor, VS Code, Copilot, Continue, and Kimi](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md)
+- [Authentication and API-key handling](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md)
+- [Python installation and direct usage](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/python-sdk.md)
+- [Local stdio, source installation, and self-hosting](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/self-hosting.md)
+- [Architecture](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/architecture.md)
+
 ### What success looks like
 
 Your client should make the nine publicly documented financial research tools available. A successful first call returns a structured dictionary containing the requested analysis, a status, and the research disclaimer—not an unstructured page that the client must scrape.
@@ -103,45 +142,6 @@ Run the HPSILab pre-trade risk scan for TSLA. Explain every warning or failed
 check, preserve unavailable fields as unavailable, and quote the returned
 reason instead of guessing. Do not execute or recommend a trade.
 ```
-
-## Other installation paths
-
-Official Remote MCP is the default. For a client that only supports local stdio:
-
-```bash
-pip install -U hpsilab-quant-finance-mcp
-```
-
-Set the `HPSILAB_API_KEY` environment variable in the client's private configuration, then launch the console command `hpsilab-quant-finance-mcp`. The package delegates API transport to the separate `hpsilab-mcp` SDK and therefore still needs network access.
-
-Add the installed stdio server to the MCP client's private configuration:
-
-```json
-{
-  "mcpServers": {
-    "hpsilab": {
-      "command": "hpsilab-quant-finance-mcp",
-      "env": {
-        "HPSILAB_API_KEY": "hpsi_your_key"
-      }
-    }
-  }
-}
-```
-
-Then verify it through the MCP client:
-
-```text
-Use HPSILab to get the AI prediction for NVDA and summarize the model consensus.
-```
-
-The client discovers tools with MCP `tools/list` and invokes them with `tools/call`; direct Python function calls are not the MCP setup path.
-
-- [Client configuration: ChatGPT, Claude, Cursor, VS Code, Copilot, Continue, and Kimi](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md)
-- [Authentication and API-key handling](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md)
-- [Python installation and direct usage](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/python-sdk.md)
-- [Local stdio, source installation, and self-hosting](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/self-hosting.md)
-- [Architecture](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/architecture.md)
 
 ## Supported clients
 
