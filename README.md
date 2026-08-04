@@ -49,6 +49,20 @@ Official Remote MCP is the default. For a client that only supports local stdio:
 pip install -U hpsilab-quant-finance-mcp
 ```
 
+With `HPSILAB_API_KEY` already configured in the process environment, verify the installation and make a direct Python call:
+
+```python
+import hpsilab_quant_finance_mcp
+from hpsilab_quant_finance_mcp import server
+
+print(hpsilab_quant_finance_mcp.__version__)
+
+result = server.get_ai_prediction("NVDA")
+print(result)
+```
+
+Direct Python calls are useful for scripts and notebooks. For MCP clients, continue with the stdio configuration below.
+
 Set the `HPSILAB_API_KEY` environment variable in the client's private configuration, then launch the console command `hpsilab-quant-finance-mcp`. The package delegates API transport to the separate `hpsilab-mcp` SDK and therefore still needs network access.
 
 Add the installed stdio server to the MCP client's private configuration:
