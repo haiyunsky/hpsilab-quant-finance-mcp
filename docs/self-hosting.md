@@ -1,10 +1,10 @@
 # Local installation and self-hosting
 
-Use Official Remote MCP unless the client requires stdio or you are developing the server. The local package still calls the hosted HPSILab API through the `hpsilab-mcp` SDK and needs network access plus a valid API key.
+Use Official Remote MCP unless the client requires stdio or you are developing the server. All financial research tools require a valid API key. The local package calls the hosted HPSILab API through the `hpsilab-mcp` SDK and needs network access.
 
 ## Local stdio with uvx
 
-For clients that can launch `uvx`:
+For clients whose stdio schema uses `mcpServers` and that can launch `uvx`:
 
 ```json
 {

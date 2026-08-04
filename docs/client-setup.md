@@ -2,7 +2,9 @@
 
 Official Remote MCP is recommended for every client that supports Streamable HTTP.
 
-## Shared remote settings
+## Remote connection parameters
+
+These values are shared, but the surrounding configuration syntax is client-specific. Do not paste one client's JSON into another client.
 
 | Setting | Value |
 | --- | --- |
@@ -11,7 +13,7 @@ Official Remote MCP is recommended for every client that supports Streamable HTT
 | URL | `https://hpsilab.com/mcp` |
 | Header | `Authorization: Bearer hpsi_your_key` |
 
-A valid API key is required. [Register](https://hpsilab.com/register), sign in, generate the key in Settings, and keep the real value in a private user-level configuration or the client's secret store.
+All financial research tools require a valid API key. [Register](https://hpsilab.com/register), sign in, generate the key in Settings, and keep the real value in a private user-level configuration or the client's secret store.
 
 ## Claude
 
@@ -60,11 +62,11 @@ Use the hosted URL and required bearer header in the MCP configuration supported
 
 ## Continue and Kimi
 
-Choose Streamable HTTP in the client's MCP settings, enter the shared remote URL, and add the required bearer header. If a client only supports stdio, follow [self-hosting.md](self-hosting.md).
+If the installed client version supports Streamable HTTP with custom bearer headers, enter the remote parameters above using that client's own configuration UI or schema. Otherwise use its documented stdio support with [self-hosting.md](self-hosting.md). This repository does not contain versioned Continue or Kimi configuration schemas.
 
 ## Verification
 
-After connecting, confirm the nine publicly documented financial research tools are available, then run:
+After connecting, confirm the 9 public financial research tools are available, then run:
 
 ```text
 Use HPSILab to analyze AAPL. Return the overall signal, confidence, strongest

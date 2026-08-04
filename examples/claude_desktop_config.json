@@ -1,10 +1,10 @@
 {
   "mcpServers": {
     "hpsilab": {
-      "type": "streamable-http",
-      "url": "https://hpsilab.com/mcp",
-      "headers": {
-        "Authorization": "Bearer hpsi_your_key"
+      "command": "uvx",
+      "args": ["hpsilab-quant-finance-mcp"],
+      "env": {
+        "HPSILAB_API_KEY": "hpsi_your_key"
       }
     }
   }

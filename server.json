@@ -37,7 +37,7 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "Valid Bearer API key generated and managed in HPSILab Settings. Required for every MCP connection.",
+          "description": "Bearer API key generated and managed in HPSILab Settings. All financial research tools require a valid API key.",
           "isRequired": true,
           "isSecret": true
         }

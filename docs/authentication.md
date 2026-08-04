@@ -8,7 +8,7 @@
 Authorization: Bearer hpsi_your_key
 ```
 
-The official endpoint is `https://hpsilab.com/mcp`. A valid API key is required for financial research calls. Do not configure the header as optional and do not rely on unauthenticated MCP access.
+The official endpoint is `https://hpsilab.com/mcp`. All financial research tools require a valid API key. Do not configure the research credential as optional.
 
 ## Local stdio
 

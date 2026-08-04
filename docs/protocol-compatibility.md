@@ -13,7 +13,7 @@ No public tool was renamed, removed, or split.
 | Area | Status | Implementation and findings |
 | --- | --- | --- |
 | `initialize` | Compliant | SDK negotiates protocol version, returns server name/version/instructions and capabilities, then accepts `notifications/initialized`. Tests verify advertised package version over stdio and HTTP. |
-| `tools/list` | Compliant | The code currently registers 10 tools, while product documentation publicly describes 9 financial research tools. Inputs are flat objects with parameter descriptions, valid JSON Schema, output schemas, and explicit boolean annotations. Catalog is static, so `listChanged` is false. |
+| `tools/list` | Compliant | The server currently registers 10 tools: 9 public research tools and one compatibility-only `register_account` tool. Inputs are flat objects with parameter descriptions, valid JSON Schema, output schemas, and explicit boolean annotations. Catalog is static, so `listChanged` is false. |
 | `tools/call` | Compliant | Successful dictionaries produce both serialized text and `structuredContent`. Structured service failures additionally return `isError: true`. Unknown tools and malformed inputs are handled by the SDK as protocol/tool validation errors. |
 | `resources/list` | Compliant, empty | The SDK advertises the resources capability with `subscribe: false` and `listChanged: false`; the list is empty. No resource URI contract is currently needed. |
 | `prompts/list` | Compliant, empty | The SDK advertises prompts with `listChanged: false`; the list is empty. Copy-ready user prompts remain documentation rather than a second runtime API. |
@@ -32,14 +32,14 @@ No public tool was renamed, removed, or split.
 
 ### Streamable HTTP
 
-- Uses the same `ProtocolFastMCP` instance and nine tool functions as stdio.
+- Uses the same `ProtocolFastMCP` instance and ten registered tool functions as stdio.
 - Supports the standard `/mcp` POST/GET endpoint and SDK-managed sessions.
 - Uses JSON responses where permitted while retaining SSE negotiation through the SDK.
 - Defaults to `127.0.0.1:8000` for safe local execution.
 - Uses SDK transport-security defaults for Host/Origin validation.
 - Can be embedded using `create_http_app()` without duplicating tool or service code.
 
-The public `https://hpsilab.com/mcp` deployment remains operationally separate from this repository's local runner. Its production TLS, proxy, rate-limit, and authorization configuration must be verified in deployment infrastructure.
+The public `https://hpsilab.com/mcp` deployment remains operationally separate from this repository's local runner. All financial research tools require a valid API key, provided to the hosted endpoint as a bearer credential. Its production TLS, proxy, rate-limit, and authorization enforcement are not implemented in this repository.
 
 ## Tool schema review
 
@@ -61,7 +61,7 @@ Tool `_meta` values such as `x-tier` and `x-access` are application metadata car
 
 `scripts/validate_project.py` checks:
 
-- the exact nine public names;
+- the exact ten registered names, including the retained `register_account` compatibility tool;
 - flat, valid input schemas and valid output schemas;
 - parameter descriptions;
 - explicit safety annotations;

@@ -9,7 +9,7 @@ Install a current Claude Code release, or use a Claude surface that supports cus
 For local stdio, also install [`uv`](https://docs.astral.sh/uv/) or the Python package:
 
 ```bash
-pip install hpsilab-quant-finance-mcp
+pip install -U hpsilab-quant-finance-mcp
 ```
 
 ## Configuration

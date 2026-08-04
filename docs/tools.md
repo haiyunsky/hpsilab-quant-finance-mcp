@@ -1,6 +1,6 @@
 # Tool reference
 
-The publicly documented HPSILab product surface contains nine financial research tools. Tool names and parameter meanings are part of the public compatibility contract.
+The HPSILab product surface contains 9 public financial research tools. Tool names and parameter meanings are part of the public compatibility contract.
 
 ## Financial research tools
 
@@ -14,9 +14,9 @@ The publicly documented HPSILab product surface contains nine financial research
 | `get_equity_curve` | Comparing standard strategy backtests | Returns, Sharpe and Sortino ratios, drawdown, win rate, and equity curves | Read-only and idempotent |
 | `get_pretrade_risk_scan` | Reviewing a proposed position before a trade | Volatility, beta, VaR, drawdown, position size, exposure, correlation, checks, and warnings | Read-only and idempotent |
 | `generate_stock_images` | Creating charts for an analysis workflow | Hosted image artifacts and URLs | Creates artifacts; not idempotent; may consume quota |
-| `generate_stock_research_report` | Creating a structured research artifact | Hosted report metadata and content | Creates an artifact; not idempotent; may consume quota |
+| `generate_stock_research_report` | Creating a structured research artifact | Markdown report, normalized symbol, and generation timestamp | Creates an artifact; not idempotent; may consume quota |
 
-All nine tools require a valid API key. They accept one US-listed equity or ETF ticker, such as `NVDA`, `AAPL`, `SPY`, or `BRK.B`. Do not pass a company name. Coverage of options-dependent fields varies by symbol and account tier.
+All financial research tools require a valid API key. They accept one US-listed equity or ETF ticker, such as `NVDA`, `AAPL`, `SPY`, or `BRK.B`. Do not pass a company name. Coverage of options-dependent fields varies by symbol and account tier.
 
 Live research output may change between calls. Generated URLs can expire. Clients should surface structured errors and nullable/unavailable fields rather than inventing replacements.
 

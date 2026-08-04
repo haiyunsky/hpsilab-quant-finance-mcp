@@ -9,11 +9,10 @@ flowchart LR
     C["MCP clients"]
     STDIO["stdio transport"]
     HTTP["Streamable HTTP transport"]
-    MCP["ProtocolFastMCP<br/>10 registered tools; 9 publicly documented"]
+    MCP["ProtocolFastMCP<br/>10 registered tools; 9 public research tools"]
     SERVICE["QuantFinanceService<br/>validation · errors · output normalization"]
     CREDS["CredentialProvider"]
     ENV["Environment API key"]
-    FUTURE["Future OAuth token context"]
     SDK["hpsilab-mcp SDK"]
     API["HPSILab API"]
 
@@ -22,7 +21,6 @@ flowchart LR
     MCP --> SERVICE --> SDK --> API
     SERVICE --> CREDS
     ENV --> CREDS
-    FUTURE -. future adapter .-> CREDS
 ```
 
 ## Module responsibilities
@@ -30,7 +28,7 @@ flowchart LR
 ### `server.py`
 
 - owns MCP server metadata and tool registration;
-- exposes the nine stable public tool functions;
+- The server currently registers 10 tools: 9 public research tools and one compatibility-only `register_account` tool.
 - converts structured service errors into MCP `CallToolResult` objects with `isError: true`;
 - selects stdio or Streamable HTTP at process startup;
 - exposes an ASGI app factory for external HTTP hosting.
@@ -49,20 +47,7 @@ This service is independent of MCP transport and can be unit-tested without star
 
 ### `auth.py`
 
-`CredentialProvider` is the boundary between service access and credential acquisition. The current implementation reads `HPSILAB_API_KEY`, which is appropriate for stdio and local development.
-
-For production HTTP OAuth, the MCP server should become an OAuth 2.1 resource server using the Official MCP SDK's token-verifier and authorization settings. A future implementation should:
-
-1. publish RFC 9728 Protected Resource Metadata;
-2. discover or reference an OAuth authorization server;
-3. validate audience, issuer, expiry, and scopes on every HTTP request;
-4. translate the validated subject/account context into an account-scoped downstream credential;
-5. support Client ID Metadata Documents where available and DCR as a compatibility fallback;
-6. leave stdio API-key behavior unchanged.
-
-**This plan is still future work for this package.** The hosted deployment at `https://hpsilab.com/mcp` already supports OAuth 2.1 Authorization Code + PKCE with Dynamic Client Registration (added 2026-07-24) — but that is a separate, internally-hosted code path independent of this PyPI package's `auth.py`. If this package's own local Streamable HTTP mode is ever given OAuth support, it would follow the plan above; it does not inherit the hosted deployment's implementation.
-
-OAuth access tokens must never be accepted in query parameters or treated as a process-global API key.
+`CredentialProvider` is the boundary between service access and credential acquisition. All financial research tools require a valid API key. The current implementation reads `HPSILAB_API_KEY` for stdio and local development, while the Official Remote MCP endpoint receives it as a bearer credential. The compatibility-only `register_account` tool remains registered in code but is not a public product feature or onboarding path. New users register at `https://hpsilab.com/register` and manage keys in Settings.
 
 ## Transport selection
 

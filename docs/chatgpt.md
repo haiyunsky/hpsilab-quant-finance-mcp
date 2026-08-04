@@ -21,11 +21,11 @@ ChatGPT connects to the hosted HPSILab Streamable HTTP server. It does not launc
    https://hpsilab.com/mcp
    ```
 
-5. Select the authentication option supported by your workspace. If the form permits a static bearer token, use the HPSILab API key as the bearer credential. Never paste it into a chat message.
+5. Configure the HPSILab API key using the workspace's bearer-credential field. If that field is unavailable, the required authenticated connection cannot be completed. Never paste the key into a chat message.
 6. Select **Scan Tools**, review the publicly documented financial research tools and their annotations, then create the app.
 7. Open a new chat and enable the draft/custom HPSILab app from the tools menu.
 
-A valid HPSILab API key is required. Configure it as the bearer credential and never paste it into a chat message.
+All financial research tools require a valid API key. Configure it as the bearer credential and never paste it into a chat message.
 
 ## Example prompts
 
@@ -68,4 +68,4 @@ Custom MCP apps may require a supported plan, web access, an administrator setti
 
 ### A report or image call asks for confirmation
 
-`generate_stock_images` and `generate_stock_research_report` create hosted artifacts and are non-idempotent. Review the action and quota implications before approving or retrying.
+`generate_stock_images` and `generate_stock_research_report` create artifacts and are non-idempotent. Images are returned as hosted URLs; the report is returned as Markdown with a generation timestamp. Review the action and quota implications before approving or retrying.

@@ -14,7 +14,7 @@ HPSILab is an open-source Python quantitative finance MCP server for research on
 
 ## Quick start: Official Remote MCP
 
-The hosted Streamable HTTP service is recommended and requires no local installation:
+The hosted Streamable HTTP service is recommended and requires no local installation. The following is a Claude Code `.mcp.json` example; other clients use different configuration schemas, documented below.
 
 ```json
 {
@@ -39,7 +39,7 @@ Use HPSILab to analyze AAPL. Separate observed metrics from interpretation,
 identify conflicting signals, and finish with a concise risk summary.
 ```
 
-A valid API key is required. See [client setup](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md) and [authentication](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md) for details.
+All financial research tools require a valid API key. See [client setup](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md) and [authentication](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md) for details.
 
 ## Quick start: Local stdio
 
@@ -61,7 +61,7 @@ result = server.get_ai_prediction("NVDA")
 print(result)
 ```
 
-For MCP, add the stdio server to the client's private configuration:
+For MCP, add the stdio server to the client's private configuration. This example uses the `mcpServers` schema supported by Claude and Cursor; VS Code and GitHub Copilot use a `servers` schema instead.
 
 ```json
 {
@@ -90,7 +90,7 @@ HPSILab gives assistants typed inputs, structured outputs, ticker validation, ma
 
 ## Tools
 
-The public product surface contains **9 financial research tools**.
+The public product surface contains **9 public financial research tools**.
 
 | Tool | What it returns | Behavior |
 | --- | --- | --- |
@@ -102,7 +102,7 @@ The public product surface contains **9 financial research tools**.
 | `get_equity_curve` | Strategy backtests and risk-adjusted performance | Read-only |
 | `get_pretrade_risk_scan` | Position, exposure, correlation, and risk checks | Read-only |
 | `generate_stock_images` | Hosted stock and options chart artifacts | Creates an artifact; not idempotent |
-| `generate_stock_research_report` | Structured hosted research report | Creates an artifact; not idempotent |
+| `generate_stock_research_report` | Structured Markdown research report and timestamp | Creates an artifact; not idempotent |
 
 Research tools accept one exchange ticker such as `NVDA`, `SPY`, or `BRK.B`; company names are not accepted. Live results can change between calls. Artifact tools can consume quota and should not be retried automatically.
 
@@ -134,7 +134,7 @@ check, preserve unavailable fields as unavailable, and quote the returned
 reason instead of guessing. Do not execute or recommend a trade.
 ```
 
-Supported clients include ChatGPT, Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi. See the [client setup guide](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md).
+Setup guidance covers ChatGPT, Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi. See the [client setup guide](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md) for each client's transport and configuration format.
 
 ## Safety and license
 
