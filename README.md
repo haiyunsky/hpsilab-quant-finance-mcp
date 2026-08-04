@@ -11,6 +11,12 @@ HPSILab is an open-source Python quantitative finance MCP server for research on
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+### Monte Carlo research example
+
+![PLTR Monte Carlo scenario visualization](assets/pltr-monte-carlo-scenarios.png)
+
+Example visualization of scenario-based Monte Carlo research output. Results depend on the selected inputs and model assumptions. See [`get_monte_carlo`](docs/tools.md#get_monte_carlo) for tool details.
+
 ## Quick start: Official Remote MCP
 
 The hosted Streamable HTTP service is recommended and requires no local installation. The following is a Claude Code `.mcp.json` example; other clients use different configuration schemas, documented below.
