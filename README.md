@@ -14,7 +14,7 @@ HPSILab brings structured quantitative research for US equities, ETFs, and suppo
 
 ## Quick start: Official Remote MCP
 
-The hosted Streamable HTTP service is the recommended setup. It requires no local Python installation and uses one official endpoint:
+The hosted Streamable HTTP service is recommended and requires no local installation:
 
 ```json
 {
@@ -39,17 +39,17 @@ Use HPSILab to analyze AAPL. Separate observed metrics from interpretation,
 identify conflicting signals, and finish with a concise risk summary.
 ```
 
-A valid API key is required for the hosted MCP connection and financial research calls. The header must be named `Authorization` and use the value `Bearer hpsi_your_key`. See [client setup](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md) and [authentication](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md) for exact configuration and troubleshooting.
+A valid API key is required. See [client setup](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md) and [authentication](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md) for details.
 
 ## Quick start: Local stdio
 
-Official Remote MCP is the default. For a client that only supports local stdio:
+For clients that require local stdio:
 
 ```bash
 pip install -U hpsilab-quant-finance-mcp
 ```
 
-With `HPSILAB_API_KEY` already configured in the process environment, verify the installation and make a direct Python call:
+With `HPSILAB_API_KEY` configured, direct Python usage is:
 
 ```python
 import hpsilab_quant_finance_mcp
@@ -61,11 +61,7 @@ result = server.get_ai_prediction("NVDA")
 print(result)
 ```
 
-Direct Python calls are useful for scripts and notebooks. For MCP clients, continue with the stdio configuration below.
-
-Set the `HPSILAB_API_KEY` environment variable in the client's private configuration, then launch the console command `hpsilab-quant-finance-mcp`. The package delegates API transport to the separate `hpsilab-mcp` SDK and therefore still needs network access.
-
-Add the installed stdio server to the MCP client's private configuration:
+For MCP, add the stdio server to the client's private configuration:
 
 ```json
 {
@@ -86,31 +82,11 @@ Then verify it through the MCP client:
 Use HPSILab to get the AI prediction for NVDA and summarize the model consensus.
 ```
 
-The client discovers tools with MCP `tools/list` and invokes them with `tools/call`; direct Python function calls are not the MCP setup path.
-
-- [Client configuration: ChatGPT, Claude, Cursor, VS Code, Copilot, Continue, and Kimi](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md)
-- [Authentication and API-key handling](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md)
-- [Python installation and direct usage](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/python-sdk.md)
-- [Local stdio, source installation, and self-hosting](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/self-hosting.md)
-- [Architecture](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/architecture.md)
-
-### What success looks like
-
-Your client should make the nine publicly documented financial research tools available. A successful first call returns a structured dictionary containing the requested analysis, a status, and the research disclaimer—not an unstructured page that the client must scrape.
-
-If the first call fails, check these three items before changing anything else:
-
-1. The endpoint is exactly the one shown in the configuration above.
-2. The authorization value begins with `Bearer ` and contains a currently valid key.
-3. The input is an exchange ticker such as `AAPL`, not a company name such as `Apple`.
+The client discovers tools with MCP `tools/list` and invokes them with `tools/call`. See [local setup](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/self-hosting.md) and [Python usage](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/python-sdk.md).
 
 ## Why HPSILab
 
-General-purpose assistants can explain financial concepts, but they should not invent quantitative metrics or silently combine incompatible sources. HPSILab gives assistants a narrow research contract with typed inputs, structured outputs, consistent ticker validation, machine-readable errors, and accurate MCP safety annotations.
-
-The tool surface covers complementary parts of a research workflow: broad signal aggregation, model consensus, volatility context, options-derived levels, probabilistic scenarios, historical strategy behavior, and pre-trade risk. Dedicated tools let the client request only the evidence needed for a question, while report and chart tools create explicit artifacts when a reusable deliverable is required.
-
-The current market scope is US-listed equities, ETFs, and supported options data. Coverage and account limits are governed by the hosted service and selected plan. HPSILab does not connect to a brokerage and cannot place, route, modify, or cancel orders.
+HPSILab gives assistants typed inputs, structured outputs, ticker validation, machine-readable errors, and dedicated tools instead of invented metrics. It supports US-listed equities, ETFs, and supported options data; coverage and limits depend on the hosted service and plan.
 
 ## Tools
 
@@ -127,6 +103,7 @@ The public product surface contains **9 financial research tools**.
 | `get_pretrade_risk_scan` | Position, exposure, correlation, and risk checks | Read-only |
 | `generate_stock_images` | Hosted stock and options chart artifacts | Creates an artifact; not idempotent |
 | `generate_stock_research_report` | Structured hosted research report | Creates an artifact; not idempotent |
+
 Research tools accept one exchange ticker such as `NVDA`, `SPY`, or `BRK.B`; company names are not accepted. Live results can change between calls. Artifact tools can consume quota and should not be retried automatically.
 
 Full inputs, outputs, side effects, and tool-selection guidance are in [docs/tools.md](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/tools.md).
@@ -157,9 +134,7 @@ check, preserve unavailable fields as unavailable, and quote the returned
 reason instead of guessing. Do not execute or recommend a trade.
 ```
 
-## Supported clients
-
-Official Remote MCP is the preferred path for ChatGPT, Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi when their current release supports Streamable HTTP and bearer credentials. Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi can also use local stdio where supported; ChatGPT connects to the hosted service. Client capabilities and UI labels evolve, so use the copy-ready configurations and troubleshooting notes in [docs/client-setup.md](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md).
+Supported clients include ChatGPT, Claude, Cursor, VS Code, GitHub Copilot, Continue, and Kimi. See the [client setup guide](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/client-setup.md).
 
 ## Safety and license
 

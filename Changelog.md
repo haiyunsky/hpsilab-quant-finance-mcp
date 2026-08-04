@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-08-05
+
+### Fixed
+
+- Normalized supported `get_ai_prediction` SDK responses before applying the
+  shared object-response check, preventing valid prediction data from being
+  returned as `invalid_response`.
+
+### Changed
+
+- Simplified `README.md` around the recommended Official Remote MCP setup,
+  local stdio installation, tool discovery, and copy-ready verification.
+- Standardized new-user registration on `https://hpsilab.com/register`; users
+  generate and manage API keys in Settings, and every MCP connection requires
+  a valid bearer credential.
+- Corrected Python installation guidance to use
+  `pip install -U hpsilab-quant-finance-mcp` and removed the unsupported
+  `server.api_key` configuration pattern.
+- Public documentation now describes nine financial research tools. The code
+  still registers `register_account`; that implementation remains unchanged
+  and is not presented as the new-user onboarding path.
+
 ## [0.8.2] - 2026-08-04
 
 ### Added
