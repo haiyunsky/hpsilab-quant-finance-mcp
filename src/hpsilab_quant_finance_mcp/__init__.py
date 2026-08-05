@@ -2,7 +2,7 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
-_FALLBACK_VERSION = "0.8.7+source"
+_FALLBACK_VERSION = "0.8.8+source"
 
 
 def _load_version() -> str:
