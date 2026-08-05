@@ -85,6 +85,16 @@ pip install -U hpsilab-quant-finance-mcp
 With `HPSILAB_API_KEY` configured, direct Python usage is:
 
 ```python
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+HPSILAB_API_KEY = os.getenv("HPSILAB_API_KEY")
+if not HPSILAB_API_KEY:
+    raise RuntimeError("HPSILAB_API_KEY is not configured")
+
+print("HPSILAB_API_KEY is configured")
+
 import hpsilab_quant_finance_mcp
 from hpsilab_quant_finance_mcp import server
 
