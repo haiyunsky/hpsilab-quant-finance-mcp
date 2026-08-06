@@ -8,8 +8,8 @@ pip install -U hpsilab-quant-finance-mcp
 
 This installs the MCP server and its required `hpsilab-mcp` SDK dependency. Do not install the dependency in place of the MCP package when following this guide.
 
-The current package and server release is `0.8.8`. Direct execution from an
-unpackaged source checkout reports `0.8.8+source`.
+The current package and server release is `0.8.9`. Direct execution from an
+unpackaged source checkout reports `0.8.9+source`.
 
 ## Direct Python usage
 

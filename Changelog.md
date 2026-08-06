@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.9] - 2026-08-07
+
+### Changed
+
+- Synchronized package, source-checkout, documentation, and registry manifest
+  version metadata for the 0.8.9 patch release.
+
 ## [0.8.8] - 2026-08-05
 
 ### Configure and Check the `.env` File

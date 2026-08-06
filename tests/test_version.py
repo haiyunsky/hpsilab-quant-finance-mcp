@@ -25,6 +25,10 @@ class VersionTests(unittest.TestCase):
         with mock.patch.object(package, "version", side_effect=package.PackageNotFoundError):
             self.assertEqual(package._load_version(), package._FALLBACK_VERSION)
 
+    def test_stale_installed_metadata_does_not_override_source_checkout(self):
+        with mock.patch.object(package, "version", return_value="0.0.1"):
+            self.assertEqual(package._load_version(), package._FALLBACK_VERSION)
+
 
 if __name__ == "__main__":
     unittest.main()

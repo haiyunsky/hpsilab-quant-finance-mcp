@@ -40,7 +40,7 @@ def validate_release_metadata() -> None:
     manifest = load_json("manifest.json")
 
     versions = {
-        "package": __version__,
+        "package": __version__.partition("+")[0],
         "server.json": registry["version"],
         "server.json package": registry["packages"][0]["version"],
         "manifest.json": manifest["version"],
