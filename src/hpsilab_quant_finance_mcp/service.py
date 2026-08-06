@@ -134,7 +134,7 @@ def error_payload(
 def quota_exceeded_payload(violation: QuotaExceeded, *, symbol: str | None = None) -> dict[str, Any]:
     """Map a local quota rejection to the shared structured error contract."""
     scope = f" for {violation.tool}" if violation.tool else ""
-    return error_payload(
+    payload = error_payload(
         "rate_limited",
         f"Free SDK quota exceeded{scope}: {violation.limit} requests per {violation.window}.",
         status_code=429,
@@ -143,9 +143,33 @@ def quota_exceeded_payload(violation: QuotaExceeded, *, symbol: str | None = Non
             "limit": violation.limit,
             "window": violation.window,
             "retry_after_seconds": violation.retry_after_seconds,
+            "reset_at": violation.reset_at,
             **({"tool": violation.tool} if violation.tool else {}),
         },
     )
+    payload.update(
+        {
+            "error": "rate_limit_exceeded",
+            **({"tool": violation.tool} if violation.tool else {}),
+            "limit": violation.limit,
+            "used": violation.limit,
+            "remaining": 0,
+            "window": violation.window,
+            "retry_after_seconds": violation.retry_after_seconds,
+            "reset_at": violation.reset_at,
+            "upgrade": {
+                "anonymous": {
+                    "message": "Register a free account to unlock a higher quota.",
+                    "register_url": REGISTER_URL,
+                },
+                "free": {
+                    "message": "Upgrade to Developer or Pro for higher limits and advanced tools.",
+                    "pricing_url": "https://hpsilab.com/pricing",
+                },
+            },
+        }
+    )
+    return payload
 
 
 def normalize_symbol(symbol: str) -> str:

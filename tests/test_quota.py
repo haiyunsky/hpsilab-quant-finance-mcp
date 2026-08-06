@@ -87,7 +87,14 @@ class QuotaTests(unittest.TestCase):
         ).call("analyze_stock", "NVDA")
 
         self.assertEqual(result["status_code"], 429)
+        self.assertEqual(result["error"], "rate_limit_exceeded")
+        self.assertEqual(result["used"], 10)
+        self.assertEqual(result["remaining"], 0)
+        self.assertTrue(result["reset_at"].endswith("Z"))
         self.assertEqual(result["details"]["limit"], 10)
+        self.assertEqual(result["details"]["reset_at"], result["reset_at"])
+        self.assertEqual(result["upgrade"]["anonymous"]["register_url"], "https://hpsilab.com/register")
+        self.assertEqual(result["upgrade"]["free"]["pricing_url"], "https://hpsilab.com/pricing")
         client_factory.assert_not_called()
 
 

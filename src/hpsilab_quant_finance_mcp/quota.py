@@ -22,6 +22,7 @@ class QuotaExceeded:
     limit: int
     window: str
     retry_after_seconds: float
+    reset_at: str
     tool: str | None = None
 
 
@@ -56,26 +57,32 @@ class FreeTierQuotaLimiter:
                 minute_requests.popleft()
 
             if len(minute_requests) >= FREE_REQUESTS_PER_MINUTE:
+                retry_after = max(0.0, 60.0 - (now_monotonic - minute_requests[0]))
                 return QuotaExceeded(
                     limit=FREE_REQUESTS_PER_MINUTE,
                     window="minute",
-                    retry_after_seconds=max(0.0, 60.0 - (now_monotonic - minute_requests[0])),
+                    retry_after_seconds=retry_after,
+                    reset_at=self._reset_at(now_wall, retry_after),
                 )
 
             daily_key = (identity, day)
             if self._daily_totals[daily_key] >= FREE_REQUESTS_PER_DAY:
+                retry_after = self._seconds_until_next_utc_day(now_wall)
                 return QuotaExceeded(
                     limit=FREE_REQUESTS_PER_DAY,
                     window="day",
-                    retry_after_seconds=self._seconds_until_next_utc_day(now_wall),
+                    retry_after_seconds=retry_after,
+                    reset_at=self._reset_at(now_wall, retry_after),
                 )
 
             tool_key = (identity, day, tool)
             if self._daily_tools[tool_key] >= FREE_REQUESTS_PER_TOOL_PER_DAY:
+                retry_after = self._seconds_until_next_utc_day(now_wall)
                 return QuotaExceeded(
                     limit=FREE_REQUESTS_PER_TOOL_PER_DAY,
                     window="day",
-                    retry_after_seconds=self._seconds_until_next_utc_day(now_wall),
+                    retry_after_seconds=retry_after,
+                    reset_at=self._reset_at(now_wall, retry_after),
                     tool=tool,
                 )
 
@@ -95,3 +102,7 @@ class FreeTierQuotaLimiter:
         current = datetime.fromtimestamp(now, timezone.utc)
         next_day = datetime.combine(current.date() + timedelta(days=1), datetime.min.time(), timezone.utc)
         return max(0.0, (next_day - current).total_seconds())
+
+    def _reset_at(self, now: float, retry_after_seconds: float) -> str:
+        reset = datetime.fromtimestamp(now + retry_after_seconds, timezone.utc)
+        return reset.isoformat(timespec="seconds").replace("+00:00", "Z")

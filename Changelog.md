@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Local quota rejections now include additive `used`, `remaining`, `reset_at`,
+  registration guidance, and paid-plan upgrade guidance while preserving the
+  existing structured error envelope.
+
 ## [0.8.9] - 2026-08-07
 
 ### Changed
