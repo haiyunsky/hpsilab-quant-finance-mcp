@@ -95,6 +95,10 @@ class QuotaTests(unittest.TestCase):
         self.assertEqual(result["details"]["reset_at"], result["reset_at"])
         self.assertEqual(result["upgrade"]["anonymous"]["register_url"], "https://hpsilab.com/register")
         self.assertEqual(result["upgrade"]["free"]["pricing_url"], "https://hpsilab.com/pricing")
+        self.assertEqual(result["next_action"]["free"]["credits"], 100)
+        self.assertEqual(result["next_action"]["free"]["url"], "https://hpsilab.com/register")
+        self.assertEqual(result["next_action"]["pro"]["credits"], 15_000)
+        self.assertEqual(result["next_action"]["pro"]["url"], "https://hpsilab.com/pricing")
         client_factory.assert_not_called()
 
 

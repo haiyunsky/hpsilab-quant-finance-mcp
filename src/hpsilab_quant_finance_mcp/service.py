@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import time
 from collections.abc import Callable
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from threading import RLock
 from typing import Any, Protocol
 
 import httpx
@@ -15,6 +17,7 @@ from hpsilab_mcp import (
     HpsiMcpAPIError,
     HpsiMcpAuthError,
     HpsiMcpClient,
+    HpsiMcpConfigError,
     HpsiMcpConnectionError,
     HpsiMcpPaymentError,
     HpsiMcpRateLimitError,
@@ -34,6 +37,18 @@ DISCLAIMER = (
 SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9.-]{0,15}$")
 REGISTER_URL = "https://hpsilab.com/register"
 DOCS_URL = "https://hpsilab.com/developer/v2"
+RATE_LIMIT_NEXT_ACTION = {
+    "free": {
+        "title": "Register Free",
+        "credits": 100,
+        "url": REGISTER_URL,
+    },
+    "pro": {
+        "title": "Upgrade to Pro",
+        "credits": 15_000,
+        "url": "https://hpsilab.com/pricing",
+    },
+}
 DEFAULT_MAX_RETRIES = 2
 USER_AGENT = f"hpsilab-python-sdk/{__version__}"
 RETRYABLE_STATUS_CODES = frozenset({500, 502, 503, 504})
@@ -167,8 +182,32 @@ def quota_exceeded_payload(violation: QuotaExceeded, *, symbol: str | None = Non
                     "pricing_url": "https://hpsilab.com/pricing",
                 },
             },
+            "next_action": RATE_LIMIT_NEXT_ACTION,
         }
     )
+    return payload
+
+
+def downstream_rate_limit_payload(exc: HpsiMcpRateLimitError, *, symbol: str | None = None) -> dict[str, Any]:
+    """Preserve safe, actionable quota fields returned by the hosted API."""
+    payload = error_payload("rate_limited", str(exc), status_code=exc.status_code, symbol=symbol)
+    body = exc.body if isinstance(exc.body, dict) else {}
+    for field in (
+        "error",
+        "tool",
+        "limit",
+        "used",
+        "remaining",
+        "window",
+        "retry_after_seconds",
+        "reset_at",
+        "upgrade",
+        "next_action",
+        "register",
+        "upgrade_hint",
+    ):
+        if field in body:
+            payload[field] = body[field]
     return payload
 
 
@@ -235,6 +274,62 @@ class QuantFinanceService:
         self._max_retries = max_retries
         self._sleep = sleep_fn
         self._quota_limiter = quota_limiter or FreeTierQuotaLimiter()
+        self._client_lock = RLock()
+        self._client_config_id: str | None = None
+        self._client: HpsiMcpClient | None = None
+        self._auth_failure: tuple[str, int | None, str] | None = None
+
+    @staticmethod
+    def _config_id(api_key: str) -> str:
+        """Identify an auth configuration without retaining another plaintext key."""
+        return hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+
+    def _local_auth_failure(self, api_key: str, *, symbol: str | None = None) -> dict[str, Any] | None:
+        config_id = self._config_id(api_key)
+        with self._client_lock:
+            failure = self._auth_failure
+        if failure is None or failure[0] != config_id:
+            return None
+        _, status_code, message = failure
+        return error_payload("configuration_error", message, status_code=status_code, symbol=symbol)
+
+    def _trip_auth_circuit(self, api_key: str, status_code: int | None, message: str) -> None:
+        with self._client_lock:
+            self._auth_failure = (self._config_id(api_key), status_code, message)
+
+    def _client_for(self, api_key: str) -> HpsiMcpClient:
+        """Reuse one SDK client until authentication configuration changes.
+
+        The SDK's 401/402 circuit breaker is intentionally instance-scoped.
+        Reconstructing a client for every tool call would discard that state
+        and allow every tool to send another known-invalid HTTP request.
+        """
+        config_id = self._config_id(api_key)
+        with self._client_lock:
+            if self._client is not None and self._client_config_id == config_id:
+                return self._client
+
+            previous = self._client
+            self._client = self._client_factory(api_key=api_key, headers={"User-Agent": USER_AGENT})
+            self._client_config_id = config_id
+            if self._auth_failure is not None and self._auth_failure[0] != config_id:
+                self._auth_failure = None
+            if previous is not None:
+                close = getattr(previous, "close", None)
+                if callable(close):
+                    close()
+            return self._client
+
+    def close(self) -> None:
+        """Release the cached SDK client, if any."""
+        with self._client_lock:
+            client, self._client = self._client, None
+            self._client_config_id = None
+            self._auth_failure = None
+            if client is not None:
+                close = getattr(client, "close", None)
+                if callable(close):
+                    close()
 
     def call(self, method_name: str, symbol: str, **kwargs: Any) -> dict[str, Any]:
         api_key = self._credential_provider.get_api_key()
@@ -246,28 +341,40 @@ class QuantFinanceService:
         except ValueError as exc:
             return error_payload("invalid_symbol", str(exc))
 
+        local_failure = self._local_auth_failure(api_key, symbol=normalized_symbol)
+        if local_failure is not None:
+            return local_failure
+
         retryable = method_name in RETRYABLE_METHODS
         for attempt in range(self._max_retries + 1):
             violation = self._quota_limiter.check_and_consume(api_key, method_name)
             if violation is not None:
                 return quota_exceeded_payload(violation, symbol=normalized_symbol)
             try:
-                with self._client_factory(api_key=api_key, headers={"User-Agent": USER_AGENT}) as client:
-                    method = getattr(client, method_name)
-                    result = method(normalized_symbol, **kwargs)
+                client = self._client_for(api_key)
+                method = getattr(client, method_name)
+                result = method(normalized_symbol, **kwargs)
                 break
+            except HpsiMcpConfigError as exc:
+                message = str(exc)
+                status_code = 402 if "402" in message else 401 if "401" in message else None
+                self._trip_auth_circuit(api_key, status_code, message)
+                return error_payload("configuration_error", message, status_code=status_code, symbol=normalized_symbol)
             except HpsiMcpPaymentError as exc:
+                self._trip_auth_circuit(api_key, exc.status_code, str(exc))
                 return error_payload(
                     "payment_required", str(exc), status_code=exc.status_code, symbol=normalized_symbol
                 )
             except HpsiMcpAuthError as exc:
+                if exc.status_code in {401, 402}:
+                    self._trip_auth_circuit(api_key, exc.status_code, str(exc))
                 return error_payload("http_error", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
             except HpsiMcpRateLimitError as exc:
                 delay = retry_after_seconds(exc)
                 if retryable and delay is not None and attempt < self._max_retries:
                     self._sleep(delay)
                     continue
-                return error_payload("rate_limited", str(exc), status_code=exc.status_code, symbol=normalized_symbol)
+                return downstream_rate_limit_payload(exc, symbol=normalized_symbol)
             except HpsiMcpTimeoutError as exc:
                 if retryable and attempt < self._max_retries:
                     self._sleep(min(0.5 * (2**attempt), 4.0))
@@ -323,6 +430,10 @@ class QuantFinanceService:
         if not api_key:
             return api_key_required_payload()
 
+        local_failure = self._local_auth_failure(api_key)
+        if local_failure is not None:
+            return local_failure
+
         normalized_email = (email or "").strip()
         if "@" not in normalized_email or len(normalized_email) < 3:
             return error_payload(
@@ -336,18 +447,25 @@ class QuantFinanceService:
             violation = self._quota_limiter.check_and_consume(api_key, "register_account")
             if violation is not None:
                 return quota_exceeded_payload(violation)
-            with self._client_factory(api_key=api_key, headers={"User-Agent": USER_AGENT}) as client:
-                result = client.register_account(normalized_email)
+            client = self._client_for(api_key)
+            result = client.register_account(normalized_email)
             if not isinstance(result, dict):
                 return error_payload(
                     "invalid_response",
                     "The HPSILab service returned a non-object response.",
                 )
             return normalize_success_payload(result)
+        except HpsiMcpConfigError as exc:
+            message = str(exc)
+            status_code = 402 if "402" in message else 401 if "401" in message else None
+            self._trip_auth_circuit(api_key, status_code, message)
+            return error_payload("configuration_error", message, status_code=status_code)
         except HpsiMcpAuthError as exc:
+            if exc.status_code in {401, 402}:
+                self._trip_auth_circuit(api_key, exc.status_code, str(exc))
             return error_payload("http_error", str(exc), status_code=exc.status_code)
         except HpsiMcpRateLimitError as exc:
-            return error_payload("rate_limited", str(exc), status_code=exc.status_code)
+            return downstream_rate_limit_payload(exc)
         except HpsiMcpTimeoutError as exc:
             return error_payload("request_timeout", str(exc))
         except HpsiMcpConnectionError as exc:

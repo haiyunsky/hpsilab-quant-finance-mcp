@@ -29,6 +29,7 @@ from hpsilab_quant_finance_mcp.service import (
     normalize_success_payload,
     normalize_symbol,
     retry_after_seconds,
+    downstream_rate_limit_payload,
 )
 
 
@@ -117,6 +118,79 @@ class ServiceTests(unittest.TestCase):
 
         self.assertNotEqual(USER_AGENT, "hpsilab-python-sdk/0.0.0")
         self.assertEqual(client_factory.call_args.kwargs["headers"]["User-Agent"], USER_AGENT)
+
+    def test_downstream_429_preserves_registration_and_paid_guidance(self):
+        body = {
+            "error": "rate_limit_exceeded",
+            "limit": 10,
+            "window": "minute",
+            "next_action": {
+                "free": {"title": "Register Free", "credits": 100, "url": "https://hpsilab.com/register"},
+                "pro": {"title": "Upgrade to Pro", "credits": 15_000, "url": "https://hpsilab.com/pricing"},
+            },
+        }
+        error = HpsiMcpRateLimitError("slow down", status_code=429, body=body)
+
+        result = downstream_rate_limit_payload(error, symbol="NVDA")
+
+        self.assertEqual(result["error"], "rate_limit_exceeded")
+        self.assertEqual(result["limit"], 10)
+        self.assertEqual(result["next_action"], body["next_action"])
+
+    def test_service_reuses_client_so_402_breaker_blocks_five_tool_sequence_locally(self):
+        requests = 0
+
+        def handler(request):
+            nonlocal requests
+            requests += 1
+            return httpx.Response(402, json={"error": "Free API key required"})
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(
+            side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs)
+        )
+        service = QuantFinanceService(client_factory=factory)
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_bad"}, clear=True):
+            results = [
+                service.call(method_name, "PINS")
+                for method_name in (
+                    "get_ai_prediction",
+                    "get_iv_radar",
+                    "get_option_pressure",
+                    "get_monte_carlo",
+                    "analyze_stock",
+                )
+            ]
+
+        self.assertEqual(results[0]["error_code"], "payment_required")
+        self.assertTrue(all(result["error_code"] == "configuration_error" for result in results[1:]))
+        self.assertTrue(all(result["status_code"] == 402 for result in results[1:]))
+        self.assertEqual(requests, 1)
+        factory.assert_called_once()
+        service.close()
+
+    def test_api_key_change_replaces_client_and_resets_breaker(self):
+        requests = []
+
+        def handler(request):
+            requests.append(request.headers.get("Authorization"))
+            if request.headers.get("Authorization") == "Bearer hpsi_bad":
+                return httpx.Response(402, json={"error": "Free API key required"})
+            return httpx.Response(200, json={"symbol": "PINS"})
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(
+            side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs)
+        )
+        service = QuantFinanceService(client_factory=factory)
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_bad"}, clear=True):
+            self.assertEqual(service.call("get_ai_prediction", "PINS")["error_code"], "payment_required")
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_good"}, clear=True):
+            self.assertEqual(service.call("get_ai_prediction", "PINS")["status"], "success")
+
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(factory.call_count, 2)
+        service.close()
 
 
 class ScriptedClient(FakeClient):

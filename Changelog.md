@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.12] - 2026-08-07
+
+### Changed
+
+- Synchronized package, source-checkout, documentation, and registry manifest
+  version metadata for the 0.8.12 patch release.
+- Added additive `next_action` registration and Pro upgrade guidance to local
+  rate-limit responses while preserving the existing error contract.
+
+## [0.8.11] - 2026-08-07
+
+### Fixed
+
+- All MCP tools now share one downstream SDK client per authentication
+  configuration. The first HTTP 401/402 opens a process-local authentication
+  circuit, so later calls are rejected locally until the API key changes or
+  the service process is recreated.
+- Raised the minimum `hpsilab-mcp` dependency to 0.12.2 so the shared client
+  also enforces its instance-level 401/402 circuit breaker.
+
+## [0.8.10] - 2026-08-07
+
 ### Changed
 
 - Local quota rejections now include additive `used`, `remaining`, `reset_at`,
@@ -262,7 +284,10 @@ Recorded retrospectively — this release shipped without a changelog entry.
 
 - `get_pretrade_risk_scan`.
 
-[Unreleased]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.5.4...HEAD
+[Unreleased]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.12...HEAD
+[0.8.12]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.11...v0.8.12
+[0.8.11]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.10...v0.8.11
+[0.8.10]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.9...v0.8.10
 [0.5.4]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/releases/tag/v0.5.4
 [0.5.3]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/releases/tag/v0.5.3
 [0.5.2]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/releases/tag/v0.5.2
