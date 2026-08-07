@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.13] - 2026-08-08
+
+### Fixed
+
+- Preserved backend quota metadata and additive registration/Pro upgrade
+  guidance when translating downstream HTTP 429 responses into MCP results.
+- Fixed the test import ordering required by the GitHub Actions Ruff check.
+
 ## [0.8.12] - 2026-08-07
 
 ### Changed
@@ -284,7 +292,8 @@ Recorded retrospectively — this release shipped without a changelog entry.
 
 - `get_pretrade_risk_scan`.
 
-[Unreleased]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.12...HEAD
+[Unreleased]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.13...HEAD
+[0.8.13]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.12...v0.8.13
 [0.8.12]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.11...v0.8.12
 [0.8.11]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.10...v0.8.11
 [0.8.10]: https://github.com/haiyunsky/hpsilab-quant-finance-mcp/compare/v0.8.9...v0.8.10

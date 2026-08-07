@@ -8,8 +8,8 @@ pip install -U hpsilab-quant-finance-mcp
 
 This installs the MCP server and its required `hpsilab-mcp` SDK dependency. Do not install the dependency in place of the MCP package when following this guide.
 
-The current package and server release is `0.8.12`. Direct execution from an
-unpackaged source checkout reports `0.8.12+source`.
+The current package and server release is `0.8.13`. Direct execution from an
+unpackaged source checkout reports `0.8.13+source`.
 
 ## Direct Python usage
 
@@ -51,5 +51,18 @@ including a retry, consumes one allowance. A locally rejected request returns
 status code 429 without constructing the downstream client. Counters are kept
 in memory for the current process; hosted enforcement remains authoritative
 across restarts and multiple machines.
+
+Quota-related 429 dictionaries include additive registration and paid-plan
+guidance under `next_action`:
+
+```python
+if result.get("error") == "rate_limit_exceeded":
+    register_url = result.get("next_action", {}).get("free", {}).get("url")
+    pricing_url = result.get("next_action", {}).get("pro", {}).get("url")
+```
+
+When a 429 originates from the hosted API, the adapter preserves its safe
+quota metadata, including `tool`, `limit`, `window`, `reset_at`, `upgrade`,
+and `next_action`, when present.
 
 Tool functions return dictionaries with stable status and error fields. Research responses also include a research disclaimer. For normal MCP use, configure an MCP client and let it discover and invoke the tools through the protocol instead of calling Python functions directly.

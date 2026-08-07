@@ -24,12 +24,12 @@ from hpsilab_quant_finance_mcp.service import (
     USER_AGENT,
     QuantFinanceClient,
     QuantFinanceService,
+    downstream_rate_limit_payload,
     error_payload,
     normalize_ai_prediction_result,
     normalize_success_payload,
     normalize_symbol,
     retry_after_seconds,
-    downstream_rate_limit_payload,
 )
 
 
@@ -146,9 +146,7 @@ class ServiceTests(unittest.TestCase):
             return httpx.Response(402, json={"error": "Free API key required"})
 
         transport = httpx.MockTransport(handler)
-        factory = mock.Mock(
-            side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs)
-        )
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
         service = QuantFinanceService(client_factory=factory)
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_bad"}, clear=True):
             results = [
@@ -179,9 +177,7 @@ class ServiceTests(unittest.TestCase):
             return httpx.Response(200, json={"symbol": "PINS"})
 
         transport = httpx.MockTransport(handler)
-        factory = mock.Mock(
-            side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs)
-        )
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
         service = QuantFinanceService(client_factory=factory)
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_bad"}, clear=True):
             self.assertEqual(service.call("get_ai_prediction", "PINS")["error_code"], "payment_required")

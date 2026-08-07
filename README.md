@@ -11,8 +11,8 @@ HPSILab is an open-source Python quantitative finance MCP server for research on
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Current package and server version: **0.8.12**. An unpackaged source checkout
-identifies itself as `0.8.12+source` so initialization metadata and outbound
+Current package and server version: **0.8.13**. An unpackaged source checkout
+identifies itself as `0.8.13+source` so initialization metadata and outbound
 User-Agent values never fall back to `0.0.0`.
 
 ### Monte Carlo research example
@@ -73,6 +73,13 @@ requests per rolling minute. Anonymous callers have zero tool requests. Each
 actual downstream attempt, including a retry, consumes one local allowance.
 Counters are process-local; the hosted API remains authoritative across
 process restarts and machines.
+
+Quota-related 429 responses preserve the hosted API's structured quota fields
+and include an additive `next_action` object. Consumers can use
+`next_action.free.url` to offer free registration and `next_action.pro.url` to
+offer the paid plan without parsing the human-readable message. Short-lived
+transport or upstream burst limits may omit these actions when waiting and
+retrying is the only effective recovery.
 
 ## Quick start: Local stdio
 
