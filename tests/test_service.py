@@ -13,8 +13,10 @@ from hpsilab_mcp import (
     HpsiMcpAPIError,
     HpsiMcpAuthError,
     HpsiMcpConnectionError,
+    HpsiMcpInsufficientCreditsError,
     HpsiMcpPaymentError,
     HpsiMcpRateLimitError,
+    HpsiMcpSettlementUnknownError,
     HpsiMcpTimeoutError,
 )
 
@@ -26,10 +28,12 @@ from hpsilab_quant_finance_mcp.service import (
     QuantFinanceService,
     downstream_rate_limit_payload,
     error_payload,
+    insufficient_credits_payload,
     normalize_ai_prediction_result,
     normalize_success_payload,
     normalize_symbol,
     retry_after_seconds,
+    settlement_unknown_payload,
 )
 
 
@@ -119,15 +123,13 @@ class ServiceTests(unittest.TestCase):
         self.assertNotEqual(USER_AGENT, "hpsilab-python-sdk/0.0.0")
         self.assertEqual(client_factory.call_args.kwargs["headers"]["User-Agent"], USER_AGENT)
 
-    def test_downstream_429_preserves_registration_and_paid_guidance(self):
+    def test_downstream_429_preserves_actionable_metadata(self):
         body = {
             "error": "rate_limit_exceeded",
             "limit": 10,
             "window": "minute",
-            "next_action": {
-                "free": {"title": "Register Free", "credits": 100, "url": "https://hpsilab.com/register"},
-                "pro": {"title": "Upgrade to Pro", "credits": 15_000, "url": "https://hpsilab.com/pricing"},
-            },
+            "retry_after_seconds": 23,
+            "next_actions": [{"type": "retry_after", "seconds": 23}],
         }
         error = HpsiMcpRateLimitError("slow down", status_code=429, body=body)
 
@@ -135,15 +137,15 @@ class ServiceTests(unittest.TestCase):
 
         self.assertEqual(result["error"], "rate_limit_exceeded")
         self.assertEqual(result["limit"], 10)
-        self.assertEqual(result["next_action"], body["next_action"])
+        self.assertEqual(result["next_actions"], body["next_actions"])
 
-    def test_service_reuses_client_so_402_breaker_blocks_five_tool_sequence_locally(self):
+    def test_service_reuses_client_so_401_breaker_blocks_five_tool_sequence_locally(self):
         requests = 0
 
         def handler(request):
             nonlocal requests
             requests += 1
-            return httpx.Response(402, json={"error": "Free API key required"})
+            return httpx.Response(401, json={"error": "not_authenticated"})
 
         transport = httpx.MockTransport(handler)
         factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
@@ -160,11 +162,73 @@ class ServiceTests(unittest.TestCase):
                 )
             ]
 
-        self.assertEqual(results[0]["error_code"], "payment_required")
-        self.assertTrue(all(result["error_code"] == "configuration_error" for result in results[1:]))
-        self.assertTrue(all(result["status_code"] == 402 for result in results[1:]))
+        self.assertTrue(all(result["error_code"] == "configuration_error" for result in results))
+        self.assertTrue(all(result["status_code"] == 401 for result in results))
         self.assertEqual(requests, 1)
         factory.assert_called_once()
+        service.close()
+
+    def test_payment_challenge_does_not_latch_the_process_shut(self):
+        # A 402 offer is a price, not a bad credential. Latching here would
+        # take a caller who touched one priced tool and lock it out of every
+        # free tool it can still call — with a valid key.
+        requests = 0
+
+        def handler(request):
+            nonlocal requests
+            requests += 1
+            return httpx.Response(
+                402,
+                json={"accepts": [{"scheme": "exact", "network": "base", "maxAmountRequired": "50000"}]},
+            )
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
+        service = QuantFinanceService(client_factory=factory)
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
+            results = [
+                service.call(method_name, "PINS")
+                for method_name in ("get_ai_prediction", "get_iv_radar", "get_option_pressure")
+            ]
+
+        self.assertTrue(all(result["error_code"] == "payment_required" for result in results))
+        self.assertEqual(requests, 3)
+        service.close()
+
+    def test_insufficient_credits_does_not_latch_the_process_shut(self):
+        # The key is valid and the account is real; the balance is empty. A
+        # latch here would refuse the call made right after Credits are added,
+        # without ever reaching the network.
+        balance = {"credits": 0}
+
+        def handler(request):
+            if balance["credits"] <= 0:
+                return httpx.Response(
+                    402,
+                    json={
+                        "error": "insufficient_credits",
+                        "message": "This call costs 5 Credits and 0 remain.",
+                        "credits_required": 5,
+                        "credits_remaining": 0,
+                        "upgrade_url": "https://hpsilab.com/pricing",
+                    },
+                )
+            return httpx.Response(200, json={"symbol": "PINS"})
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
+        service = QuantFinanceService(client_factory=factory)
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
+            refused = service.call("get_ai_prediction", "PINS")
+            balance["credits"] = 500
+            topped_up = service.call("get_ai_prediction", "PINS")
+
+        self.assertEqual(refused["error_code"], "insufficient_credits")
+        self.assertEqual(refused["status_code"], 402)
+        self.assertEqual(refused["credits_required"], 5)
+        self.assertEqual(refused["credits_remaining"], 0)
+        self.assertEqual(refused["credits_charged"], 0)
+        self.assertEqual(topped_up["status"], "success")
         service.close()
 
     def test_api_key_change_replaces_client_and_resets_breaker(self):
@@ -173,20 +237,95 @@ class ServiceTests(unittest.TestCase):
         def handler(request):
             requests.append(request.headers.get("Authorization"))
             if request.headers.get("Authorization") == "Bearer hpsi_bad":
-                return httpx.Response(402, json={"error": "Free API key required"})
+                return httpx.Response(401, json={"error": "not_authenticated"})
             return httpx.Response(200, json={"symbol": "PINS"})
 
         transport = httpx.MockTransport(handler)
         factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
         service = QuantFinanceService(client_factory=factory)
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_bad"}, clear=True):
-            self.assertEqual(service.call("get_ai_prediction", "PINS")["error_code"], "payment_required")
+            self.assertEqual(service.call("get_ai_prediction", "PINS")["error_code"], "configuration_error")
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_good"}, clear=True):
             self.assertEqual(service.call("get_ai_prediction", "PINS")["status"], "success")
 
         self.assertEqual(len(requests), 2)
         self.assertEqual(factory.call_count, 2)
         service.close()
+
+    def test_insufficient_credits_payload_offers_one_remedy(self):
+        anonymous = insufficient_credits_payload(
+            HpsiMcpInsufficientCreditsError(
+                "out of Credits",
+                status_code=402,
+                body={"error": "insufficient_credits"},
+                credits_required=5,
+                credits_remaining=2,
+                upgrade_url="https://hpsilab.com/pricing",
+                register_url="https://hpsilab.com/register",
+            )
+        )
+        registered = insufficient_credits_payload(
+            HpsiMcpInsufficientCreditsError(
+                "out of Credits",
+                status_code=402,
+                body={"error": "insufficient_credits"},
+                credits_required=5,
+                credits_remaining=2,
+                upgrade_url="https://hpsilab.com/pricing",
+            )
+        )
+
+        self.assertEqual(
+            anonymous["next_actions"],
+            [{"type": "register", "label": "Get 100 trial Credits", "url": "https://hpsilab.com/register"}],
+        )
+        self.assertEqual(anonymous["register"], "https://hpsilab.com/register")
+        # Registering is the one remedy a caller with an account cannot take;
+        # rendering it for them is a dead link that blames their account.
+        self.assertNotIn("register", registered)
+        self.assertEqual(
+            registered["next_actions"],
+            [{"type": "upgrade", "label": "Get more Credits", "url": "https://hpsilab.com/pricing"}],
+        )
+        self.assertNotIn("accepts", anonymous)
+        self.assertNotIn("retry_after_seconds", anonymous)
+
+    def test_hosted_next_actions_win_over_the_local_fallback(self):
+        # Only the API knows that 100 Credits are already granted and waiting
+        # behind an unclicked verification link.
+        verify = [{"type": "verify_email", "label": "Verify your email for 100 Credits", "url": "https://x"}]
+        payload = insufficient_credits_payload(
+            HpsiMcpInsufficientCreditsError(
+                "out of Credits",
+                status_code=402,
+                body={"error": "insufficient_credits", "next_actions": verify},
+                credits_required=5,
+                credits_remaining=0,
+            )
+        )
+
+        self.assertEqual(payload["next_actions"], verify)
+
+    def test_settlement_unknown_offers_nothing_and_keeps_the_call_id(self):
+        payload = settlement_unknown_payload(
+            HpsiMcpSettlementUnknownError(
+                "payment may have settled",
+                call_id="call_abc123",
+                tool="get_ai_prediction",
+                settlement_status="unknown",
+            ),
+            symbol="NVDA",
+        )
+
+        self.assertEqual(payload["error_code"], "settlement_unknown")
+        self.assertEqual(payload["x402_status"], "settlement_unknown")
+        self.assertEqual(payload["settlement_status"], "unknown")
+        self.assertEqual(payload["call_id"], "call_abc123")
+        # Safety outranks conversion here: any action in this space is an
+        # invitation to sign a second authorization for one logical call.
+        self.assertEqual(payload["next_actions"], [])
+        self.assertNotIn("accepts", payload)
+        self.assertNotIn("upgrade", payload)
 
 
 class ScriptedClient(FakeClient):
@@ -247,6 +386,39 @@ class RetryTests(unittest.TestCase):
             with self.subTest(status_code=status_code):
                 ScriptedClient.calls = []
                 ScriptedClient.outcomes = [HpsiMcpAuthError("invalid key", status_code=status_code)]
+                with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
+                    results = QuantFinanceService(client_factory=ScriptedClient).call_batch(
+                        "analyze_stock", ["NVDA", "AAPL", "SPY"]
+                    )
+
+                self.assertEqual(len(results), 1)
+                self.assertEqual(len(ScriptedClient.calls), 1)
+
+    def test_insufficient_credits_and_settlement_unknown_are_never_retried(self):
+        errors = (
+            HpsiMcpInsufficientCreditsError("no Credits", status_code=402, credits_required=5, credits_remaining=0),
+            HpsiMcpSettlementUnknownError("unresolved", call_id="call_1", settlement_status="unknown"),
+        )
+        for error in errors:
+            with self.subTest(error=type(error).__name__):
+                ScriptedClient.calls = []
+                result, sleep = self.call([error, {"symbol": "NVDA"}])
+                self.assertIn(result["error_code"], {"insufficient_credits", "settlement_unknown"})
+                self.assertEqual(len(ScriptedClient.calls), 1)
+                sleep.assert_not_called()
+
+    def test_batch_stops_before_repeating_a_credits_or_settlement_refusal(self):
+        cases = (
+            HpsiMcpInsufficientCreditsError("no Credits", status_code=402, credits_required=5, credits_remaining=0),
+            # No status code at all: raised from the payment path rather than
+            # from a response, so a status-only check would walk right past it
+            # and pay again for the next symbol.
+            HpsiMcpSettlementUnknownError("unresolved", call_id="call_1", settlement_status="unknown"),
+        )
+        for error in cases:
+            with self.subTest(error=type(error).__name__):
+                ScriptedClient.calls = []
+                ScriptedClient.outcomes = [error]
                 with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
                     results = QuantFinanceService(client_factory=ScriptedClient).call_batch(
                         "analyze_stock", ["NVDA", "AAPL", "SPY"]

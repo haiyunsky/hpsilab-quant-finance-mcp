@@ -8,8 +8,8 @@ pip install -U hpsilab-quant-finance-mcp
 
 This installs the MCP server and its required `hpsilab-mcp` SDK dependency. Do not install the dependency in place of the MCP package when following this guide.
 
-The current package and server release is `0.8.13`. Direct execution from an
-unpackaged source checkout reports `0.8.13+source`.
+The current package and server release is `0.9.0`. Direct execution from an
+unpackaged source checkout reports `0.9.0+source`.
 
 ## Direct Python usage
 
@@ -38,31 +38,55 @@ valid `Retry-After` value is available. Read-only calls use a finite retry
 budget for timeouts and recoverable 500/502/503/504 responses; artifact
 generation calls are not automatically retried because they are non-idempotent.
 
-## Local Free-tier quotas
+## Local burst protection
 
-The adapter enforces all three limits for each configured API key:
+The adapter enforces one process-local limit per configured API key: 10
+requests per rolling 60 seconds. Anonymous callers receive zero tool requests.
+Every actual downstream attempt, including a retry, consumes one allowance. A
+locally rejected request returns status code 429 without constructing the
+downstream client.
 
-- 20 requests per tool per UTC day;
-- 100 total SDK requests per UTC day;
-- 10 total SDK requests per rolling 60 seconds.
+This is burst protection, not a quota. Day-scoped local gates were removed in
+0.9.0: entitlement is measured in Credits, and a process that cannot see a
+balance or a plan was refusing Developer and Pro keys at the Free tier's
+numbers for the rest of the UTC day.
 
-Anonymous callers receive zero tool requests. Every actual downstream attempt,
-including a retry, consumes one allowance. A locally rejected request returns
-status code 429 without constructing the downstream client. Counters are kept
-in memory for the current process; hosted enforcement remains authoritative
-across restarts and multiple machines.
-
-Quota-related 429 dictionaries include additive registration and paid-plan
-guidance under `next_action`:
+A 429 says only that the caller is going too fast, so it carries no
+registration or upgrade guidance. The action it does carry is the one that
+resolves it:
 
 ```python
 if result.get("error") == "rate_limit_exceeded":
-    register_url = result.get("next_action", {}).get("free", {}).get("url")
-    pricing_url = result.get("next_action", {}).get("pro", {}).get("url")
+    wait_seconds = result["retry_after_seconds"]  # also in next_actions
 ```
 
 When a 429 originates from the hosted API, the adapter preserves its safe
-quota metadata, including `tool`, `limit`, `window`, `reset_at`, `upgrade`,
-and `next_action`, when present.
+metadata, including `tool`, `limit`, `window`, `reset_at`, and `next_actions`,
+when present.
+
+## Credits, payment, and settlement
+
+An empty Credit balance is HTTP 402 with `error: "insufficient_credits"`. It
+is reported as `error_code: "insufficient_credits"` — never as a rate limit,
+which waiting would resolve, and never as a generic HTTP error, which would
+discard the numbers a caller needs:
+
+```python
+if result.get("error") == "insufficient_credits":
+    needed = result["credits_required"]
+    have = result["credits_remaining"]  # credits_charged is always 0 here
+    actions = result["next_actions"]  # register, or upgrade — never both
+```
+
+`next_actions` is the canonical machine-readable list. Entries carry a `type`
+(`register`, `verify_email`, `upgrade`, `retry_after`), a label, and a URL
+where one applies. `register` appears only for a caller with no account.
+
+If a payment was sent and the API cannot confirm whether it settled, the
+result is `error_code: "settlement_unknown"` with `x402_status:
+"settlement_unknown"`, an empty `next_actions`, and a `call_id`. **Do not
+retry that call and do not pay for it again** — a retry signs a second
+authorization for one logical call. Keep the `call_id`: it is what
+reconciliation needs to determine whether the money moved.
 
 Tool functions return dictionaries with stable status and error fields. Research responses also include a research disclaimer. For normal MCP use, configure an MCP client and let it discover and invoke the tools through the protocol instead of calling Python functions directly.

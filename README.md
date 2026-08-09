@@ -11,8 +11,8 @@ HPSILab is an open-source Python quantitative finance MCP server for research on
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Current package and server version: **0.8.13**. An unpackaged source checkout
-identifies itself as `0.8.13+source` so initialization metadata and outbound
+Current package and server version: **0.9.0**. An unpackaged source checkout
+identifies itself as `0.9.0+source` so initialization metadata and outbound
 User-Agent values never fall back to `0.0.0`.
 
 ### Monte Carlo research example
@@ -67,19 +67,22 @@ a valid `Retry-After`. Read-only calls use a finite retry budget for timeouts
 and recoverable 500/502/503/504 responses; artifact-producing calls are not
 automatically retried.
 
-The local SDK adapter also applies Free-tier safeguards per API key: 20
-requests per tool per UTC day, 100 total requests per UTC day, and 10 total
-requests per rolling minute. Anonymous callers have zero tool requests. Each
-actual downstream attempt, including a retry, consumes one local allowance.
-Counters are process-local; the hosted API remains authoritative across
-process restarts and machines.
+The local adapter also applies one safeguard per API key: 10 requests per
+rolling minute. Anonymous callers have zero tool requests. Each actual
+downstream attempt, including a retry, consumes one local allowance. This is
+burst protection, not a quota — entitlement is measured in Credits, and only
+the hosted API knows the balance and the plan.
 
-Quota-related 429 responses preserve the hosted API's structured quota fields
-and include an additive `next_action` object. Consumers can use
-`next_action.free.url` to offer free registration and `next_action.pro.url` to
-offer the paid plan without parsing the human-readable message. Short-lived
-transport or upstream burst limits may omit these actions when waiting and
-retrying is the only effective recovery.
+A 429 means the caller is going too fast and nothing else, so it carries no
+registration or upgrade guidance; its `next_actions` holds the one action that
+resolves it, `{"type": "retry_after", "seconds": n}`. An empty Credit balance
+is a different response with a different remedy: HTTP 402 with `error_code:
+"insufficient_credits"`, `credits_required`, `credits_remaining`,
+`credits_charged: 0`, and a `next_actions` list naming registration for a
+caller with no account or a Credits purchase for one who has an account. A
+payment whose outcome could not be confirmed is `error_code:
+"settlement_unknown"` with a `call_id` and an empty `next_actions` — do not
+retry it and do not pay for it again.
 
 ## Quick start: Local stdio
 

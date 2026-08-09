@@ -39,9 +39,15 @@ New users must register through [https://hpsilab.com/register](https://hpsilab.c
 If a key is exposed, revoke or replace it in Settings and update the private client configuration. Authentication failures should be returned as structured errors; clients must not echo credentials while troubleshooting.
 
 The package never retries 401, 402, or 403 responses. Batch service calls stop
-on the first authentication or authorization failure.
+on the first authentication or authorization failure, on an empty Credit
+balance, and on an unresolved payment settlement.
 
-For a configured Free-user key, the local SDK also enforces 20 requests per
-tool per UTC day, 100 total requests per UTC day, and 10 total requests per
-rolling minute. These process-local counters are a client-side safeguard; the
-hosted service remains the authoritative quota source.
+An empty balance arrives as HTTP 402 with `error: "insufficient_credits"` and
+is reported under its own error code. It is not an authentication failure: the
+key is valid, nothing was charged (`credits_charged: 0`), and the call made
+after Credits are added is sent rather than refused locally.
+
+The package also enforces one process-local limit: 10 requests per rolling
+minute per API key. It is burst protection for the hosted API, not a quota —
+entitlement is measured in Credits, and only the hosted service knows the
+balance and the plan.

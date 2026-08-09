@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import time
 from collections.abc import Callable
@@ -19,16 +20,18 @@ from hpsilab_mcp import (
     HpsiMcpClient,
     HpsiMcpConfigError,
     HpsiMcpConnectionError,
+    HpsiMcpInsufficientCreditsError,
     HpsiMcpPaymentError,
     HpsiMcpRateLimitError,
     HpsiMcpResponseError,
+    HpsiMcpSettlementUnknownError,
     HpsiMcpTimeoutError,
 )
 from hpsilab_mcp import register as hpsilab_register
 
 from . import __version__
 from .auth import CredentialProvider, EnvironmentApiKeyProvider
-from .quota import FreeTierQuotaLimiter, QuotaExceeded
+from .quota import BurstRateLimiter, RateLimited
 
 DISCLAIMER = (
     "Research and educational output only. This is not investment advice, "
@@ -36,19 +39,8 @@ DISCLAIMER = (
 )
 SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9.-]{0,15}$")
 REGISTER_URL = "https://hpsilab.com/register"
+PRICING_URL = "https://hpsilab.com/pricing"
 DOCS_URL = "https://hpsilab.com/developer/v2"
-RATE_LIMIT_NEXT_ACTION = {
-    "free": {
-        "title": "Register Free",
-        "credits": 100,
-        "url": REGISTER_URL,
-    },
-    "pro": {
-        "title": "Upgrade to Pro",
-        "credits": 15_000,
-        "url": "https://hpsilab.com/pricing",
-    },
-}
 DEFAULT_MAX_RETRIES = 2
 USER_AGENT = f"hpsilab-python-sdk/{__version__}"
 RETRYABLE_STATUS_CODES = frozenset({500, 502, 503, 504})
@@ -66,11 +58,22 @@ RETRYABLE_METHODS = frozenset(
 
 
 class QuantFinanceClient(HpsiMcpClient):
-    """Preserve Retry-After metadata exposed by the downstream response."""
+    """Preserve Retry-After metadata exposed by the downstream response.
 
-    def _raise_for_status(self, response: httpx.Response) -> None:
+    The signature forwards whatever the SDK passes rather than restating it.
+    It used to name `(self, response)` exactly, and when the SDK began passing
+    `payment_refusal=` in 0.13.0 that override started raising `TypeError` on
+    every non-2xx response — before the SDK could classify it. The typed
+    exception this subclass exists to enrich was never constructed, and the
+    service's bare `except Exception` turned every 401, 402, and 429 into an
+    untyped `http_error` with no status code, which is also how the bounded
+    retry on 429 stopped happening. An override that only decorates has no
+    business restating a signature it does not read.
+    """
+
+    def _raise_for_status(self, response: httpx.Response, *args: Any, **kwargs: Any) -> None:
         try:
-            super()._raise_for_status(response)
+            super()._raise_for_status(response, *args, **kwargs)
         except HpsiMcpRateLimitError as exc:
             exc.response_headers = response.headers
             raise
@@ -146,12 +149,19 @@ def error_payload(
     return payload
 
 
-def quota_exceeded_payload(violation: QuotaExceeded, *, symbol: str | None = None) -> dict[str, Any]:
-    """Map a local quota rejection to the shared structured error contract."""
-    scope = f" for {violation.tool}" if violation.tool else ""
+def rate_limited_payload(violation: RateLimited, *, symbol: str | None = None) -> dict[str, Any]:
+    """Map a local burst rejection to the shared structured error contract.
+
+    Deliberately carries no registration or upgrade guidance. A 429 is a
+    "you are going too fast" and nothing else; the one action that resolves
+    it is waiting, and an upsell attached here sells a plan to someone whose
+    problem costs two seconds to fix. The hosted API dropped the same fields
+    from its own 429 on 2026-08-08 for the same reason.
+    """
     payload = error_payload(
         "rate_limited",
-        f"Free SDK quota exceeded{scope}: {violation.limit} requests per {violation.window}.",
+        f"Local burst limit reached: {violation.limit} requests per {violation.window} "
+        f"per API key. Retry in {math.ceil(violation.retry_after_seconds)}s.",
         status_code=429,
         symbol=symbol,
         details={
@@ -172,17 +182,7 @@ def quota_exceeded_payload(violation: QuotaExceeded, *, symbol: str | None = Non
             "window": violation.window,
             "retry_after_seconds": violation.retry_after_seconds,
             "reset_at": violation.reset_at,
-            "upgrade": {
-                "anonymous": {
-                    "message": "Register a free account to unlock a higher quota.",
-                    "register_url": REGISTER_URL,
-                },
-                "free": {
-                    "message": "Upgrade to Developer or Pro for higher limits and advanced tools.",
-                    "pricing_url": "https://hpsilab.com/pricing",
-                },
-            },
-            "next_action": RATE_LIMIT_NEXT_ACTION,
+            "next_actions": [{"type": "retry_after", "seconds": math.ceil(violation.retry_after_seconds)}],
         }
     )
     return payload
@@ -201,6 +201,12 @@ def downstream_rate_limit_payload(exc: HpsiMcpRateLimitError, *, symbol: str | N
         "window",
         "retry_after_seconds",
         "reset_at",
+        # `next_actions` is the canonical machine-readable list; the four that
+        # follow it are the older single-remedy fields. Passed through rather
+        # than rebuilt: what the API sent about the caller in front of it is
+        # more accurate than anything this process can infer, and dropping a
+        # field it chose to send is not this layer's decision.
+        "next_actions",
         "upgrade",
         "next_action",
         "register",
@@ -208,6 +214,95 @@ def downstream_rate_limit_payload(exc: HpsiMcpRateLimitError, *, symbol: str | N
     ):
         if field in body:
             payload[field] = body[field]
+    return payload
+
+
+def _credits_next_actions(
+    body: dict[str, Any], *, register_url: str | None, upgrade_url: str | None
+) -> list[dict[str, Any]]:
+    """Return what this caller can actually do about an empty balance.
+
+    The API's own list wins when it sent one: it knows things this process
+    cannot, such as whether 100 Credits are already granted and waiting behind
+    an unclicked verification link. Only the fallback is derived locally, and
+    it offers exactly one remedy — registering, for a caller who has no
+    account, or buying Credits for one who does. No `x402_payment` action
+    appears here: a Credits refusal carries no offer, and naming a payment
+    with nothing to settle is a dead end dressed as a choice.
+    """
+    actions = body.get("next_actions")
+    if isinstance(actions, list) and actions and all(isinstance(action, dict) for action in actions):
+        return actions
+    if register_url:
+        return [{"type": "register", "label": "Get 100 trial Credits", "url": register_url}]
+    return [{"type": "upgrade", "label": "Get more Credits", "url": upgrade_url or PRICING_URL}]
+
+
+def insufficient_credits_payload(exc: HpsiMcpInsufficientCreditsError, *, symbol: str | None = None) -> dict[str, Any]:
+    """Map an empty Credit balance to its own error code, never to a rate limit.
+
+    This is not `rate_limited` and not `http_error`. Waiting resolves the
+    first and says nothing about this one; the second discards the two numbers
+    an agent needs to decide anything (`credits_required` / `credits_remaining`)
+    and leaves it with prose to pattern-match.
+    """
+    body = exc.body if isinstance(exc.body, dict) else {}
+    payload = error_payload(
+        "insufficient_credits",
+        str(exc),
+        status_code=exc.status_code or 402,
+        symbol=symbol,
+    )
+    payload["error"] = "insufficient_credits"
+    for field, value in (
+        ("credits_required", exc.credits_required),
+        ("credits_remaining", exc.credits_remaining),
+        ("upgrade_url", exc.upgrade_url),
+        # Only an anonymous caller gets this: registering is the one remedy
+        # someone who already signed up cannot take, and rendering it for them
+        # is a dead link that implies the fault is with their account.
+        ("register", exc.register_url),
+    ):
+        if value is not None:
+            payload[field] = value
+    for field in ("tool", "upgrade", "upgrade_hint"):
+        if field in body:
+            payload[field] = body[field]
+    # Always stated, always 0 on a refusal. "Nothing was charged" should be a
+    # fact the caller reads rather than one it infers from a missing key.
+    payload["credits_charged"] = 0
+    payload["next_actions"] = _credits_next_actions(body, register_url=exc.register_url, upgrade_url=exc.upgrade_url)
+    return payload
+
+
+def settlement_unknown_payload(exc: HpsiMcpSettlementUnknownError, *, symbol: str | None = None) -> dict[str, Any]:
+    """Report a payment whose outcome nobody can confirm, and offer nothing.
+
+    The authorization left the process and the facilitator may have moved the
+    money before failing to answer. Retrying signs a *new* authorization for
+    the same logical call — a second payment for one piece of work — so this
+    payload carries an empty `next_actions`: safety outranks conversion here,
+    and an offer in this space is an invitation to pay twice. `call_id` is
+    what a reconciliation run needs; it is the one thing worth keeping.
+    """
+    payload = error_payload(
+        "settlement_unknown",
+        str(exc),
+        status_code=getattr(exc, "status_code", None),
+        symbol=symbol,
+    )
+    payload.update(
+        {
+            "error": "settlement_unknown",
+            "x402_status": "settlement_unknown",
+            "settlement_status": exc.settlement_status or "unknown",
+            "next_actions": [],
+        }
+    )
+    if exc.call_id:
+        payload["call_id"] = exc.call_id
+    if exc.tool:
+        payload["tool"] = exc.tool
     return payload
 
 
@@ -264,7 +359,7 @@ class QuantFinanceService:
         register_fn: RegisterFn | Callable[..., dict[str, Any]] = hpsilab_register,
         max_retries: int = DEFAULT_MAX_RETRIES,
         sleep_fn: Callable[[float], None] = time.sleep,
-        quota_limiter: FreeTierQuotaLimiter | None = None,
+        quota_limiter: BurstRateLimiter | None = None,
     ) -> None:
         if not isinstance(max_retries, int) or isinstance(max_retries, bool) or max_retries < 0:
             raise ValueError("max_retries must be a non-negative integer.")
@@ -273,7 +368,7 @@ class QuantFinanceService:
         self._register_fn = register_fn
         self._max_retries = max_retries
         self._sleep = sleep_fn
-        self._quota_limiter = quota_limiter or FreeTierQuotaLimiter()
+        self._quota_limiter = quota_limiter or BurstRateLimiter()
         self._client_lock = RLock()
         self._client_config_id: str | None = None
         self._client: HpsiMcpClient | None = None
@@ -300,9 +395,11 @@ class QuantFinanceService:
     def _client_for(self, api_key: str) -> HpsiMcpClient:
         """Reuse one SDK client until authentication configuration changes.
 
-        The SDK's 401/402 circuit breaker is intentionally instance-scoped.
-        Reconstructing a client for every tool call would discard that state
-        and allow every tool to send another known-invalid HTTP request.
+        The SDK's authentication circuit breaker is intentionally
+        instance-scoped. Reconstructing a client for every tool call would
+        discard that state and allow every tool to send another known-invalid
+        HTTP request. It latches on 401 only: a 402 is a price or an empty
+        balance, and neither is fixed by building a new client.
         """
         config_id = self._config_id(api_key)
         with self._client_lock:
@@ -349,19 +446,35 @@ class QuantFinanceService:
         for attempt in range(self._max_retries + 1):
             violation = self._quota_limiter.check_and_consume(api_key, method_name)
             if violation is not None:
-                return quota_exceeded_payload(violation, symbol=normalized_symbol)
+                return rate_limited_payload(violation, symbol=normalized_symbol)
             try:
                 client = self._client_for(api_key)
                 method = getattr(client, method_name)
                 result = method(normalized_symbol, **kwargs)
                 break
+            # First, and outside the retry loop's reach on purpose. This one is
+            # not an `HpsiMcpAPIError` in the SDK either, for the same reason:
+            # the ordinary "an API error happened, try again" handler is the
+            # line that pays twice here.
+            except HpsiMcpSettlementUnknownError as exc:
+                return settlement_unknown_payload(exc, symbol=normalized_symbol)
+            # Before the auth circuit below, and that ordering is the point. An
+            # empty balance is not a broken credential: the key is valid, and
+            # the call made right after Credits are added has to reach the
+            # network instead of being short-circuited by a latch set here.
+            except HpsiMcpInsufficientCreditsError as exc:
+                return insufficient_credits_payload(exc, symbol=normalized_symbol)
             except HpsiMcpConfigError as exc:
                 message = str(exc)
                 status_code = 402 if "402" in message else 401 if "401" in message else None
                 self._trip_auth_circuit(api_key, status_code, message)
                 return error_payload("configuration_error", message, status_code=status_code, symbol=normalized_symbol)
+            # No circuit here. A payment challenge is a price, not a bad key —
+            # the SDK stopped treating it as an authentication failure in
+            # 0.13.0, and latching the whole process shut on one would take a
+            # caller who touched a priced tool and lock it out of the free
+            # ones it can still call.
             except HpsiMcpPaymentError as exc:
-                self._trip_auth_circuit(api_key, exc.status_code, str(exc))
                 return error_payload(
                     "payment_required", str(exc), status_code=exc.status_code, symbol=normalized_symbol
                 )
@@ -410,12 +523,23 @@ class QuantFinanceService:
             return error_payload("http_error", str(exc), status_code=status_code, symbol=normalized_symbol)
 
     def call_batch(self, method_name: str, symbols: list[str], **kwargs: Any) -> list[dict[str, Any]]:
-        """Call symbols in order and stop immediately on authentication failure."""
+        """Call symbols in order and stop on anything the next symbol repeats.
+
+        An empty balance and an unresolved settlement are checked by error code
+        as well as status: the first is a 402 that the remaining symbols would
+        each pay a request to rediscover, and the second may arrive with no
+        status at all — it is raised from the payment path rather than from a
+        response, and continuing the batch after it risks paying again.
+        """
         results: list[dict[str, Any]] = []
         for symbol in symbols:
             result = self.call(method_name, symbol, **kwargs)
             results.append(result)
-            if result.get("error") == "api_key_required" or result.get("status_code") in {401, 402, 403}:
+            if (
+                result.get("error") == "api_key_required"
+                or result.get("status_code") in {401, 402, 403}
+                or result.get("error_code") in {"insufficient_credits", "settlement_unknown"}
+            ):
                 break
         return results
 
@@ -446,7 +570,7 @@ class QuantFinanceService:
         try:
             violation = self._quota_limiter.check_and_consume(api_key, "register_account")
             if violation is not None:
-                return quota_exceeded_payload(violation)
+                return rate_limited_payload(violation)
             client = self._client_for(api_key)
             result = client.register_account(normalized_email)
             if not isinstance(result, dict):
@@ -455,11 +579,15 @@ class QuantFinanceService:
                     "The HPSILab service returned a non-object response.",
                 )
             return normalize_success_payload(result)
+        except HpsiMcpInsufficientCreditsError as exc:
+            return insufficient_credits_payload(exc)
         except HpsiMcpConfigError as exc:
             message = str(exc)
             status_code = 402 if "402" in message else 401 if "401" in message else None
             self._trip_auth_circuit(api_key, status_code, message)
             return error_payload("configuration_error", message, status_code=status_code)
+        except HpsiMcpPaymentError as exc:
+            return error_payload("payment_required", str(exc), status_code=exc.status_code)
         except HpsiMcpAuthError as exc:
             if exc.status_code in {401, 402}:
                 self._trip_auth_circuit(api_key, exc.status_code, str(exc))

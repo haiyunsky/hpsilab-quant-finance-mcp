@@ -1,4 +1,4 @@
-"""Process-local Free-tier quota enforcement for downstream SDK requests."""
+"""Process-local burst protection for downstream SDK requests."""
 
 from __future__ import annotations
 
@@ -8,16 +8,18 @@ import time
 from collections import defaultdict, deque
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-FREE_REQUESTS_PER_DAY = 100
-FREE_REQUESTS_PER_MINUTE = 10
-FREE_REQUESTS_PER_TOOL_PER_DAY = 20
+# The per-minute ceiling the hosted API applies to anonymous and Free callers.
+# Held locally so a runaway agent loop is stopped here instead of ten HTTP
+# requests later. A refusal at this boundary clears itself inside a minute,
+# which is the only reason a local guess about a remote limit is safe to make.
+LOCAL_REQUESTS_PER_MINUTE = 10
 
 
 @dataclass(frozen=True, slots=True)
-class QuotaExceeded:
-    """Describe the first local quota boundary that rejected a request."""
+class RateLimited:
+    """Describe the local burst boundary that refused a request."""
 
     limit: int
     window: str
@@ -26,8 +28,21 @@ class QuotaExceeded:
     tool: str | None = None
 
 
-class FreeTierQuotaLimiter:
-    """Enforce Free SDK quotas without retaining raw API keys."""
+class BurstRateLimiter:
+    """Enforce a per-minute request ceiling without retaining raw API keys.
+
+    Day-scoped gates used to live here too: 100 requests per UTC day and 20
+    per tool per day. They mirrored the requests-per-day quotas the hosted API
+    retired on 2026-08-08, when Credits became the unit of entitlement — and
+    they mirrored them in the one place that can see neither a balance nor a
+    plan. A Developer key (60 rpm) or a Pro key (300 rpm, 15,000 Credits) was
+    refused here at the Free tier's numbers, for the rest of the UTC day,
+    without a request ever leaving the process.
+
+    What remains is burst protection and nothing else. It guards the hosted
+    API from a loop; it does not pretend to meter entitlement, because
+    entitlement now has one authority and it is not this process.
+    """
 
     def __init__(
         self,
@@ -38,70 +53,31 @@ class FreeTierQuotaLimiter:
         self._wall_time = wall_time
         self._monotonic = monotonic
         self._lock = threading.Lock()
-        self._daily_totals: dict[tuple[str, str], int] = defaultdict(int)
-        self._daily_tools: dict[tuple[str, str, str], int] = defaultdict(int)
         self._minute_requests: dict[str, deque[float]] = defaultdict(deque)
-        self._active_day: str | None = None
 
-    def check_and_consume(self, api_key: str, tool: str) -> QuotaExceeded | None:
-        """Consume one request allowance or return the blocking quota."""
+    def check_and_consume(self, api_key: str, tool: str) -> RateLimited | None:
+        """Consume one request allowance or return the blocking limit."""
         identity = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
         now_wall = self._wall_time()
         now_monotonic = self._monotonic()
-        day = datetime.fromtimestamp(now_wall, timezone.utc).date().isoformat()
 
         with self._lock:
-            self._reset_expired_days(day)
             minute_requests = self._minute_requests[identity]
             while minute_requests and now_monotonic - minute_requests[0] >= 60.0:
                 minute_requests.popleft()
 
-            if len(minute_requests) >= FREE_REQUESTS_PER_MINUTE:
+            if len(minute_requests) >= LOCAL_REQUESTS_PER_MINUTE:
                 retry_after = max(0.0, 60.0 - (now_monotonic - minute_requests[0]))
-                return QuotaExceeded(
-                    limit=FREE_REQUESTS_PER_MINUTE,
+                return RateLimited(
+                    limit=LOCAL_REQUESTS_PER_MINUTE,
                     window="minute",
-                    retry_after_seconds=retry_after,
-                    reset_at=self._reset_at(now_wall, retry_after),
-                )
-
-            daily_key = (identity, day)
-            if self._daily_totals[daily_key] >= FREE_REQUESTS_PER_DAY:
-                retry_after = self._seconds_until_next_utc_day(now_wall)
-                return QuotaExceeded(
-                    limit=FREE_REQUESTS_PER_DAY,
-                    window="day",
-                    retry_after_seconds=retry_after,
-                    reset_at=self._reset_at(now_wall, retry_after),
-                )
-
-            tool_key = (identity, day, tool)
-            if self._daily_tools[tool_key] >= FREE_REQUESTS_PER_TOOL_PER_DAY:
-                retry_after = self._seconds_until_next_utc_day(now_wall)
-                return QuotaExceeded(
-                    limit=FREE_REQUESTS_PER_TOOL_PER_DAY,
-                    window="day",
                     retry_after_seconds=retry_after,
                     reset_at=self._reset_at(now_wall, retry_after),
                     tool=tool,
                 )
 
             minute_requests.append(now_monotonic)
-            self._daily_totals[daily_key] += 1
-            self._daily_tools[tool_key] += 1
             return None
-
-    def _reset_expired_days(self, day: str) -> None:
-        if self._active_day == day:
-            return
-        self._daily_totals.clear()
-        self._daily_tools.clear()
-        self._active_day = day
-
-    def _seconds_until_next_utc_day(self, now: float) -> float:
-        current = datetime.fromtimestamp(now, timezone.utc)
-        next_day = datetime.combine(current.date() + timedelta(days=1), datetime.min.time(), timezone.utc)
-        return max(0.0, (next_day - current).total_seconds())
 
     def _reset_at(self, now: float, retry_after_seconds: float) -> str:
         reset = datetime.fromtimestamp(now + retry_after_seconds, timezone.utc)

@@ -6,6 +6,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-09
+
+Alignment with the hosted error contract that took effect on 2026-08-08, when
+Credits became the unit of entitlement. Three responses this package could not
+previously tell apart — "wait", "top up", and "pay for this call" — now arrive
+as three error codes with three different remedies.
+
+### Fixed
+
+- **Every non-2xx response was being reported as an untyped `http_error`** for
+  anyone running `hpsilab-mcp` 0.13.0 or later, which the previous dependency
+  floor (`>=0.12.2`) allowed. `QuantFinanceClient._raise_for_status` restated
+  the signature it was overriding, so the `payment_refusal=` argument the SDK
+  began passing in 0.13.0 raised `TypeError` before the response could be
+  classified: no status code, no typed exception, and no bounded retry on 429.
+  The override now forwards whatever the SDK passes.
+- A payment challenge no longer latches the whole process shut. A 402 offer is
+  a price, not a bad credential — the SDK stopped treating it as an
+  authentication failure in 0.13.0, and mirroring that failure here locked a
+  caller with a valid key out of every free tool after it touched a priced one.
+
+### Added
+
+- `insufficient_credits` — an empty Credit balance (HTTP 402,
+  `error: "insufficient_credits"`) is reported under its own error code with
+  `credits_required`, `credits_remaining`, `credits_charged: 0`, and a
+  `next_actions` list. It never trips the local authentication circuit: the key
+  is valid, and the call made right after Credits are added has to reach the
+  network instead of being refused locally.
+- `settlement_unknown` — a payment the API cannot confirm is reported with
+  `x402_status: "settlement_unknown"`, the `call_id` a reconciliation run
+  needs, and a deliberately empty `next_actions`. It is not retried and no
+  offer is attached: a retry signs a second authorization for one logical call.
+- `next_actions`, the canonical machine-readable conversion layer, on local
+  refusals and passed through from the hosted API.
+
+### Changed
+
+- **429 responses no longer carry registration or upgrade guidance.** The
+  `upgrade` and `next_action` objects added in 0.8.10–0.8.13 are gone from
+  locally generated rate limits. A 429 is resolved by waiting; selling a plan
+  to a caller whose problem clears itself inside a minute points at the wrong
+  remedy. The hosted API removed the same fields from its own 429 on
+  2026-08-08. Hosted 429 bodies are still passed through unchanged.
+- **Day-scoped local quotas are removed** (100 requests per UTC day, 20 per
+  tool per UTC day). They copied the requests-per-day gates the hosted API
+  retired on 2026-08-08, in the one place that can see neither a balance nor a
+  plan: a Developer key (60 rpm) or a Pro key (300 rpm, 15,000 Credits) was
+  refused at the Free tier's numbers for the rest of the UTC day without a
+  request ever leaving the process. What remains is burst protection: 10
+  requests per rolling minute per API key.
+- `FreeTierQuotaLimiter` is now `BurstRateLimiter`, `QuotaExceeded` is
+  `RateLimited`, and `FREE_REQUESTS_PER_MINUTE` is `LOCAL_REQUESTS_PER_MINUTE`.
+  The removed day-scoped constants have no replacement.
+- Batch calls stop on an empty balance and on an unresolved settlement, not
+  only on authentication failures. The second may arrive with no status code
+  at all, so it is matched by error code.
+- Minimum `hpsilab-mcp` raised to 0.13.5 for `HpsiMcpInsufficientCreditsError`,
+  `HpsiMcpSettlementUnknownError`, and one `X-Request-Id` per logical call.
+
 ## [0.8.13] - 2026-08-08
 
 ### Fixed
