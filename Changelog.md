@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-08-10
+
+### Added
+
+- A 60-second, per-API-key `insufficient_credits` circuit breaker. After the
+  first hosted 402, calls across all symbols and tools return the cached
+  structured refusal locally with `circuit_open` and `retry_after_seconds`.
+  The circuit expires automatically and embeddings can clear it immediately
+  after a top-up with `clear_insufficient_credits_circuit()`.
+
+### Changed
+
+- Raised the minimum `hpsilab-mcp` REST SDK version to 0.13.10 and synchronized
+  package, source fallback, MCP Registry manifest, catalog manifest, and
+  user-facing version documentation for this patch release.
+
 ## [0.9.0] - 2026-08-09
 
 Alignment with the hosted error contract that took effect on 2026-08-08, when

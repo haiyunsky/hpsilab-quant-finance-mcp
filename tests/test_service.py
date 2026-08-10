@@ -195,7 +195,7 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(requests, 3)
         service.close()
 
-    def test_insufficient_credits_does_not_latch_the_process_shut(self):
+    def test_insufficient_credits_circuit_stops_calls_until_cleared(self):
         # The key is valid and the account is real; the balance is empty. A
         # latch here would refuse the call made right after Credits are added,
         # without ever reaching the network.
@@ -221,6 +221,8 @@ class ServiceTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
             refused = service.call("get_ai_prediction", "PINS")
             balance["credits"] = 500
+            blocked = service.call("get_iv_radar", "AMZN")
+            service.clear_insufficient_credits_circuit()
             topped_up = service.call("get_ai_prediction", "PINS")
 
         self.assertEqual(refused["error_code"], "insufficient_credits")
@@ -228,7 +230,59 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(refused["credits_required"], 5)
         self.assertEqual(refused["credits_remaining"], 0)
         self.assertEqual(refused["credits_charged"], 0)
+        self.assertTrue(blocked["circuit_open"])
+        self.assertEqual(blocked["symbol"], "AMZN")
+        self.assertEqual(blocked["retry_after_seconds"], 60)
         self.assertEqual(topped_up["status"], "success")
+        service.close()
+
+    def test_insufficient_credits_circuit_expires(self):
+        now = {"value": 100.0}
+        requests = []
+
+        def handler(request):
+            requests.append(request)
+            if len(requests) == 1:
+                return httpx.Response(
+                    402,
+                    json={"error": "insufficient_credits", "credits_required": 5, "credits_remaining": 0},
+                )
+            return httpx.Response(200, json={"symbol": "PINS"})
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
+        service = QuantFinanceService(client_factory=factory, monotonic_fn=lambda: now["value"])
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
+            self.assertEqual(service.call("get_ai_prediction", "PINS")["error_code"], "insufficient_credits")
+            now["value"] = 159.0
+            self.assertTrue(service.call("get_iv_radar", "AMZN")["circuit_open"])
+            now["value"] = 160.0
+            self.assertEqual(service.call("get_ai_prediction", "PINS")["status"], "success")
+
+        self.assertEqual(len(requests), 2)
+        service.close()
+
+    def test_insufficient_credits_circuit_is_isolated_by_api_key(self):
+        requests = []
+
+        def handler(request):
+            authorization = request.headers.get("Authorization")
+            requests.append(authorization)
+            if authorization == "Bearer hpsi_empty":
+                return httpx.Response(402, json={"error": "insufficient_credits"})
+            return httpx.Response(200, json={"symbol": "PINS"})
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
+        service = QuantFinanceService(client_factory=factory)
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_empty"}, clear=True):
+            self.assertEqual(service.call("get_ai_prediction", "PINS")["error_code"], "insufficient_credits")
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_funded"}, clear=True):
+            self.assertEqual(service.call("get_ai_prediction", "PINS")["status"], "success")
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_empty"}, clear=True):
+            self.assertTrue(service.call("get_iv_radar", "AMZN")["circuit_open"])
+
+        self.assertEqual(requests, ["Bearer hpsi_empty", "Bearer hpsi_funded"])
         service.close()
 
     def test_api_key_change_replaces_client_and_resets_breaker(self):

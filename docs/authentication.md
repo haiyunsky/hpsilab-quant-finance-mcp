@@ -44,8 +44,13 @@ balance, and on an unresolved payment settlement.
 
 An empty balance arrives as HTTP 402 with `error: "insufficient_credits"` and
 is reported under its own error code. It is not an authentication failure: the
-key is valid, nothing was charged (`credits_charged: 0`), and the call made
-after Credits are added is sent rather than refused locally.
+key is valid and nothing was charged (`credits_charged: 0`). To prevent an
+agent from repeating the same known failure across symbols and tools, the
+local service short-circuits calls made with that API key for 60 seconds. The
+original structured error is returned locally with `circuit_open: true` and
+`retry_after_seconds`; no hosted request is made. The circuit expires
+automatically. An embedding that knows Credits were added can recheck
+immediately by calling `service.clear_insufficient_credits_circuit()`.
 
 The package also enforces one process-local limit: 10 requests per rolling
 minute per API key. It is burst protection for the hosted API, not a quota —

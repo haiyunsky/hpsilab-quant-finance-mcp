@@ -7,14 +7,14 @@
     "url": "https://github.com/haiyunsky/hpsilab-quant-finance-mcp",
     "source": "github"
   },
-  "version": "0.9.0",
+  "version": "0.9.1",
   "websiteUrl": "https://hpsilab.com",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "hpsilab-quant-finance-mcp",
-      "version": "0.9.0",
+      "version": "0.9.1",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"

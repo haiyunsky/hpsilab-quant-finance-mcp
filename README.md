@@ -11,8 +11,8 @@ HPSILab is an open-source Python quantitative finance MCP server for research on
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Current package and server version: **0.9.0**. An unpackaged source checkout
-identifies itself as `0.9.0+source` so initialization metadata and outbound
+Current package and server version: **0.9.1**. An unpackaged source checkout
+identifies itself as `0.9.1+source` so initialization metadata and outbound
 User-Agent values never fall back to `0.0.0`.
 
 ### Monte Carlo research example

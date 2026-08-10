@@ -42,6 +42,7 @@ REGISTER_URL = "https://hpsilab.com/register"
 PRICING_URL = "https://hpsilab.com/pricing"
 DOCS_URL = "https://hpsilab.com/developer/v2"
 DEFAULT_MAX_RETRIES = 2
+DEFAULT_INSUFFICIENT_CREDITS_TTL_SECONDS = 60.0
 USER_AGENT = f"hpsilab-python-sdk/{__version__}"
 RETRYABLE_STATUS_CODES = frozenset({500, 502, 503, 504})
 RETRYABLE_METHODS = frozenset(
@@ -360,19 +361,30 @@ class QuantFinanceService:
         max_retries: int = DEFAULT_MAX_RETRIES,
         sleep_fn: Callable[[float], None] = time.sleep,
         quota_limiter: BurstRateLimiter | None = None,
+        insufficient_credits_ttl_seconds: float = DEFAULT_INSUFFICIENT_CREDITS_TTL_SECONDS,
+        monotonic_fn: Callable[[], float] = time.monotonic,
     ) -> None:
         if not isinstance(max_retries, int) or isinstance(max_retries, bool) or max_retries < 0:
             raise ValueError("max_retries must be a non-negative integer.")
+        if (
+            isinstance(insufficient_credits_ttl_seconds, bool)
+            or not isinstance(insufficient_credits_ttl_seconds, (int, float))
+            or insufficient_credits_ttl_seconds < 0
+        ):
+            raise ValueError("insufficient_credits_ttl_seconds must be a non-negative number.")
         self._credential_provider = credential_provider or EnvironmentApiKeyProvider()
         self._client_factory = client_factory
         self._register_fn = register_fn
         self._max_retries = max_retries
         self._sleep = sleep_fn
         self._quota_limiter = quota_limiter or BurstRateLimiter()
+        self._insufficient_credits_ttl_seconds = float(insufficient_credits_ttl_seconds)
+        self._monotonic = monotonic_fn
         self._client_lock = RLock()
         self._client_config_id: str | None = None
         self._client: HpsiMcpClient | None = None
         self._auth_failure: tuple[str, int | None, str] | None = None
+        self._insufficient_credits_failures: dict[str, tuple[float, dict[str, Any]]] = {}
 
     @staticmethod
     def _config_id(api_key: str) -> str:
@@ -391,6 +403,45 @@ class QuantFinanceService:
     def _trip_auth_circuit(self, api_key: str, status_code: int | None, message: str) -> None:
         with self._client_lock:
             self._auth_failure = (self._config_id(api_key), status_code, message)
+
+    def _local_insufficient_credits_failure(
+        self, api_key: str, *, symbol: str | None = None
+    ) -> dict[str, Any] | None:
+        config_id = self._config_id(api_key)
+        now = self._monotonic()
+        with self._client_lock:
+            failure = self._insufficient_credits_failures.get(config_id)
+            if failure is None:
+                return None
+            expires_at, payload = failure
+            if now >= expires_at:
+                del self._insufficient_credits_failures[config_id]
+                return None
+            local_payload = dict(payload)
+        if symbol is not None:
+            local_payload["symbol"] = symbol
+        local_payload["circuit_open"] = True
+        local_payload["retry_after_seconds"] = max(1, math.ceil(expires_at - now))
+        return local_payload
+
+    def _trip_insufficient_credits_circuit(self, api_key: str, payload: dict[str, Any]) -> None:
+        if self._insufficient_credits_ttl_seconds <= 0:
+            return
+        expires_at = self._monotonic() + self._insufficient_credits_ttl_seconds
+        with self._client_lock:
+            self._insufficient_credits_failures[self._config_id(api_key)] = (expires_at, dict(payload))
+
+    def clear_insufficient_credits_circuit(self, api_key: str | None = None) -> None:
+        """Allow an immediate balance recheck after Credits are added.
+
+        When ``api_key`` is omitted, the currently configured credential is
+        used. The key itself is never retained; only its SHA-256 config ID is.
+        """
+        selected_key = api_key or self._credential_provider.get_api_key()
+        if not selected_key:
+            return
+        with self._client_lock:
+            self._insufficient_credits_failures.pop(self._config_id(selected_key), None)
 
     def _client_for(self, api_key: str) -> HpsiMcpClient:
         """Reuse one SDK client until authentication configuration changes.
@@ -423,6 +474,7 @@ class QuantFinanceService:
             client, self._client = self._client, None
             self._client_config_id = None
             self._auth_failure = None
+            self._insufficient_credits_failures.clear()
             if client is not None:
                 close = getattr(client, "close", None)
                 if callable(close):
@@ -441,6 +493,9 @@ class QuantFinanceService:
         local_failure = self._local_auth_failure(api_key, symbol=normalized_symbol)
         if local_failure is not None:
             return local_failure
+        credits_failure = self._local_insufficient_credits_failure(api_key, symbol=normalized_symbol)
+        if credits_failure is not None:
+            return credits_failure
 
         retryable = method_name in RETRYABLE_METHODS
         for attempt in range(self._max_retries + 1):
@@ -458,12 +513,14 @@ class QuantFinanceService:
             # line that pays twice here.
             except HpsiMcpSettlementUnknownError as exc:
                 return settlement_unknown_payload(exc, symbol=normalized_symbol)
-            # Before the auth circuit below, and that ordering is the point. An
-            # empty balance is not a broken credential: the key is valid, and
-            # the call made right after Credits are added has to reach the
-            # network instead of being short-circuited by a latch set here.
+            # An empty balance is not a broken credential, so keep it out of
+            # the permanent auth circuit. A short circuit does stop an agent's
+            # immediate cross-tool fan-out; it expires or can be cleared after
+            # a known top-up.
             except HpsiMcpInsufficientCreditsError as exc:
-                return insufficient_credits_payload(exc, symbol=normalized_symbol)
+                payload = insufficient_credits_payload(exc, symbol=normalized_symbol)
+                self._trip_insufficient_credits_circuit(api_key, payload)
+                return payload
             except HpsiMcpConfigError as exc:
                 message = str(exc)
                 status_code = 402 if "402" in message else 401 if "401" in message else None
