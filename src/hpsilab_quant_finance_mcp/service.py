@@ -404,9 +404,7 @@ class QuantFinanceService:
         with self._client_lock:
             self._auth_failure = (self._config_id(api_key), status_code, message)
 
-    def _local_insufficient_credits_failure(
-        self, api_key: str, *, symbol: str | None = None
-    ) -> dict[str, Any] | None:
+    def _local_insufficient_credits_failure(self, api_key: str, *, symbol: str | None = None) -> dict[str, Any] | None:
         config_id = self._config_id(api_key)
         now = self._monotonic()
         with self._client_lock:
