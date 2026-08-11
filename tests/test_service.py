@@ -1,6 +1,8 @@
 import os
 import sys
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest import mock
 
@@ -283,6 +285,74 @@ class ServiceTests(unittest.TestCase):
             self.assertTrue(service.call("get_iv_radar", "AMZN")["circuit_open"])
 
         self.assertEqual(requests, ["Bearer hpsi_empty", "Bearer hpsi_funded"])
+        service.close()
+
+    def test_concurrent_insufficient_credits_calls_reach_backend_once(self):
+        requests = 0
+        requests_lock = threading.Lock()
+        start = threading.Barrier(5)
+
+        def handler(request):
+            nonlocal requests
+            with requests_lock:
+                requests += 1
+            return httpx.Response(402, json={"error": "insufficient_credits", "credits_remaining": 0})
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
+        service = QuantFinanceService(client_factory=factory)
+
+        def call(symbol):
+            start.wait()
+            return service.call("get_ai_prediction", symbol)
+
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
+            with ThreadPoolExecutor(max_workers=5) as pool:
+                results = list(pool.map(call, ["AMZN", "ARGX", "DKNG", "ABNB", "PINS"]))
+
+        self.assertEqual(requests, 1)
+        self.assertEqual(sum(bool(result.get("circuit_open")) for result in results), 4)
+        self.assertTrue(all(result["error_code"] == "insufficient_credits" for result in results))
+        service.close()
+
+    def test_identity_locks_do_not_block_different_api_keys(self):
+        service = QuantFinanceService()
+        first_entered = threading.Event()
+        second_entered = threading.Event()
+        release = threading.Event()
+
+        def hold(lock, entered):
+            with lock:
+                entered.set()
+                release.wait(timeout=2)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [
+                pool.submit(hold, service._identity_lock("hpsi_one"), first_entered),
+                pool.submit(hold, service._identity_lock("hpsi_two"), second_entered),
+            ]
+            self.assertTrue(first_entered.wait(timeout=1))
+            self.assertTrue(second_entered.wait(timeout=1))
+            release.set()
+            for future in futures:
+                future.result(timeout=1)
+        service.close()
+
+    def test_identity_lock_is_released_after_an_exception(self):
+        calls = 0
+
+        class RaisingClient(FakeClient):
+            def get_ai_prediction(self, symbol):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    raise RuntimeError("temporary failure")
+                return {"symbol": symbol}
+
+        service = QuantFinanceService(client_factory=RaisingClient)
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
+            self.assertEqual(service.call("get_ai_prediction", "PINS")["error_code"], "http_error")
+            self.assertEqual(service.call("get_ai_prediction", "PINS")["status"], "success")
         service.close()
 
     def test_api_key_change_replaces_client_and_resets_breaker(self):

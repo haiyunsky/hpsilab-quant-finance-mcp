@@ -47,6 +47,9 @@ is reported under its own error code. It is not an authentication failure: the
 key is valid and nothing was charged (`credits_charged: 0`). To prevent an
 agent from repeating the same known failure across symbols and tools, the
 local service short-circuits calls made with that API key for 60 seconds. The
+breaker check, hosted request, and breaker update share a per-identity lock,
+so a concurrent batch sends at most one request after the balance is empty.
+Other API keys use different locks and continue independently. The
 original structured error is returned locally with `circuit_open: true` and
 `retry_after_seconds`; no hosted request is made. The circuit expires
 automatically. An embedding that knows Credits were added can recheck

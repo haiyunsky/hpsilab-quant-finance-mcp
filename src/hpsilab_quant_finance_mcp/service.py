@@ -385,6 +385,7 @@ class QuantFinanceService:
         self._client: HpsiMcpClient | None = None
         self._auth_failure: tuple[str, int | None, str] | None = None
         self._insufficient_credits_failures: dict[str, tuple[float, dict[str, Any]]] = {}
+        self._identity_locks: dict[str, RLock] = {}
 
     @staticmethod
     def _config_id(api_key: str) -> str:
@@ -404,6 +405,15 @@ class QuantFinanceService:
         with self._client_lock:
             self._auth_failure = (self._config_id(api_key), status_code, message)
 
+    def _identity_lock(self, api_key: str) -> RLock:
+        config_id = self._config_id(api_key)
+        with self._client_lock:
+            lock = self._identity_locks.get(config_id)
+            if lock is None:
+                lock = RLock()
+                self._identity_locks[config_id] = lock
+            return lock
+
     def _local_insufficient_credits_failure(self, api_key: str, *, symbol: str | None = None) -> dict[str, Any] | None:
         config_id = self._config_id(api_key)
         now = self._monotonic()
@@ -414,6 +424,10 @@ class QuantFinanceService:
             expires_at, payload = failure
             if now >= expires_at:
                 del self._insufficient_credits_failures[config_id]
+                client = self._client if self._client_config_id == config_id else None
+                clear = getattr(client, "clear_insufficient_credits_circuit", None)
+                if callable(clear):
+                    clear()
                 return None
             local_payload = dict(payload)
         if symbol is not None:
@@ -439,7 +453,12 @@ class QuantFinanceService:
         if not selected_key:
             return
         with self._client_lock:
-            self._insufficient_credits_failures.pop(self._config_id(selected_key), None)
+            config_id = self._config_id(selected_key)
+            self._insufficient_credits_failures.pop(config_id, None)
+            client = self._client if self._client_config_id == config_id else None
+            clear = getattr(client, "clear_insufficient_credits_circuit", None)
+            if callable(clear):
+                clear()
 
     def _client_for(self, api_key: str) -> HpsiMcpClient:
         """Reuse one SDK client until authentication configuration changes.
@@ -473,6 +492,7 @@ class QuantFinanceService:
             self._client_config_id = None
             self._auth_failure = None
             self._insufficient_credits_failures.clear()
+            self._identity_locks.clear()
             if client is not None:
                 close = getattr(client, "close", None)
                 if callable(close):
@@ -488,6 +508,12 @@ class QuantFinanceService:
         except ValueError as exc:
             return error_payload("invalid_symbol", str(exc))
 
+        with self._identity_lock(api_key):
+            return self._call_for_identity(api_key, method_name, normalized_symbol, **kwargs)
+
+    def _call_for_identity(
+        self, api_key: str, method_name: str, normalized_symbol: str, **kwargs: Any
+    ) -> dict[str, Any]:
         local_failure = self._local_auth_failure(api_key, symbol=normalized_symbol)
         if local_failure is not None:
             return local_failure

@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-08-11
+
+### Fixed
+
+- Made the `insufficient_credits` breaker atomic per API-key identity. The
+  breaker check, downstream SDK call, and breaker update now share one
+  identity-specific lock, so a concurrent fan-out reaches the backend once
+  and every waiting call is refused locally after the first 402. Different
+  identities do not block one another.
+
+### Changed
+
+- Raised the minimum `hpsilab-mcp` REST SDK version to 0.13.11, which applies
+  the same atomic Credits breaker to direct SDK calls.
+
 ## [0.9.1] - 2026-08-10
 
 ### Added
