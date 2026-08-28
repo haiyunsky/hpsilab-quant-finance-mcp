@@ -8,8 +8,8 @@ pip install -U hpsilab-quant-finance-mcp
 
 This installs the MCP server and its required `hpsilab-mcp` SDK dependency. Do not install the dependency in place of the MCP package when following this guide.
 
-The current package and server release is `0.9.2`. Direct execution from an
-unpackaged source checkout reports `0.9.2+source`.
+The current package and server release is `0.10.0`. Direct execution from an
+unpackaged source checkout reports `0.10.0+source`.
 
 ## Direct Python usage
 
@@ -51,9 +51,9 @@ This is burst protection, not a quota. Day-scoped local gates were removed in
 balance or a plan was refusing Developer and Pro keys at the Free tier's
 numbers for the rest of the UTC day.
 
-A 429 says only that the caller is going too fast, so it carries no
-registration or upgrade guidance. The action it does carry is the one that
-resolves it:
+A 429 says only that the caller is going too fast, so the refusal this package
+raises locally carries no registration or upgrade guidance of its own. The
+action it does carry is the one that resolves it:
 
 ```python
 if result.get("error") == "rate_limit_exceeded":
@@ -61,8 +61,11 @@ if result.get("error") == "rate_limit_exceeded":
 ```
 
 When a 429 originates from the hosted API, the adapter preserves its safe
-metadata, including `tool`, `limit`, `window`, `reset_at`, and `next_actions`,
-when present.
+metadata, including `tool`, `limit`, `window`, `reset_at`, `next_actions`, and
+the plan guidance the service attached (`upgrade_available`, `upgrade_message`,
+`upgrade_url`), when present. Only the hosted service can see the plan behind
+the key, so what it says about this caller is passed through rather than
+rebuilt or withheld.
 
 ## Credits, payment, and settlement
 
@@ -81,6 +84,25 @@ if result.get("error") == "insufficient_credits":
 `next_actions` is the canonical machine-readable list. Entries carry a `type`
 (`register`, `verify_email`, `upgrade`, `retry_after`), a label, and a URL
 where one applies. `register` appears only for a caller with no account.
+
+A caller that has not identified itself gets a fourth possibility on the same
+status. The free evaluation allowance is HTTP 402 with `error:
+"anonymous_allowance_exhausted"`, reported as `error_code:
+"allowance_exhausted"` — never as `payment_required`, which would ask someone
+who owes nothing to configure a wallet, and never as a generic HTTP error,
+which would discard the ceiling itself:
+
+```python
+if result.get("error_code") == "allowance_exhausted":
+    used = result["calls_used"]  # cached results count toward this
+    ceiling = result["calls_allowed"]  # per result["window_days"] days
+    actions = result["next_actions"]  # register_account first — free, one call
+```
+
+`calls_allowed_next` names the ceiling registering would raise it to, and is
+absent for a caller already on that rung; those callers get `verify_email`
+rather than `register`. Requires `hpsilab-mcp` 0.14.0 or later, which is the
+release that stopped raising this refusal as a payment error.
 
 If a payment was sent and the API cannot confirm whether it settled, the
 result is `error_code: "settlement_unknown"` with `x402_status:

@@ -55,6 +55,17 @@ original structured error is returned locally with `circuit_open: true` and
 automatically. An embedding that knows Credits were added can recheck
 immediately by calling `service.clear_insufficient_credits_circuit()`.
 
+A spent free evaluation allowance is the third thing that arrives on 402 and
+is reported as `error_code: "allowance_exhausted"`. It is not an empty balance
+and not a price: the ceiling counts calls made without a confirmed identity,
+so it lifts when the caller registers or verifies its email, and no amount of
+Credits raises it. The refusal carries `calls_used`, `calls_allowed`,
+`window_days`, `credits_charged: 0`, and `next_actions`; for an unregistered
+caller the first action is the `register_account` tool, which needs only an
+email address and no browser. Unlike the Credits refusal it opens no local
+circuit — registering lifts the ceiling for the API key already configured, so
+the call made immediately afterwards has to reach the network.
+
 The package also enforces one process-local limit: 10 requests per rolling
 minute per API key. It is burst protection for the hosted API, not a quota —
 entitlement is measured in Credits, and only the hosted service knows the

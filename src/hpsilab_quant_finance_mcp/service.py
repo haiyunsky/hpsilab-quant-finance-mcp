@@ -15,6 +15,7 @@ from typing import Any, Protocol
 
 import httpx
 from hpsilab_mcp import (
+    HpsiMcpAllowanceExhaustedError,
     HpsiMcpAPIError,
     HpsiMcpAuthError,
     HpsiMcpClient,
@@ -202,6 +203,9 @@ def downstream_rate_limit_payload(exc: HpsiMcpRateLimitError, *, symbol: str | N
         "window",
         "retry_after_seconds",
         "reset_at",
+        "upgrade_available",
+        "upgrade_message",
+        "upgrade_url",
         # `next_actions` is the canonical machine-readable list; the four that
         # follow it are the older single-remedy fields. Passed through rather
         # than rebuilt: what the API sent about the caller in front of it is
@@ -273,6 +277,117 @@ def insufficient_credits_payload(exc: HpsiMcpInsufficientCreditsError, *, symbol
     # fact the caller reads rather than one it infers from a missing key.
     payload["credits_charged"] = 0
     payload["next_actions"] = _credits_next_actions(body, register_url=exc.register_url, upgrade_url=exc.upgrade_url)
+    return payload
+
+
+def _allowance_verify_email_url(exc: HpsiMcpAllowanceExhaustedError) -> str | None:
+    """Resolve the verification link, falling back to the body the SDK kept.
+
+    `exc.verify_email_url` is run through the SDK's public-URL allowlist, which
+    admits only `https://hpsilab.com/register` and `/pricing`. The verification
+    remedy is the site root, so the sanitized attribute is `None` for every
+    real unverified-account refusal and this fallback is the only way the field
+    is ever populated.
+
+    Reading it off the body is what the rest of this module already does with
+    `next_actions`, `upgrade`, and `upgrade_hint` — and the same URL rides in
+    `next_actions` untouched regardless, so withholding it here would hide a
+    remedy the payload publishes two lines further down.
+    """
+    if exc.verify_email_url:
+        return exc.verify_email_url
+    body = exc.body if isinstance(exc.body, dict) else {}
+    verify = body.get("verify_email")
+    return verify if isinstance(verify, str) and verify else None
+
+
+def _allowance_next_actions(
+    body: dict[str, Any], *, register_url: str | None, verify_email_url: str | None
+) -> list[dict[str, Any]]:
+    """Return what lifts this ceiling, and never a price.
+
+    The API's own list wins when it sent one: only it knows whether this caller
+    should register or verify an address it has already given us. The local
+    fallback leads with `register_account` rather than the signup URL because
+    this package *exposes* that tool — an agent can take the remedy itself, in
+    one call, with no browser and no human. No `upgrade` action appears in
+    either branch, even though the body carries `upgrade_url`: money does not
+    buy an anonymous caller more anonymous calls, and putting a price ahead of
+    the free remedy is exactly what the API's own ordering prevents.
+    """
+    actions = body.get("next_actions")
+    if isinstance(actions, list) and actions and all(isinstance(action, dict) for action in actions):
+        return actions
+    if register_url:
+        return [
+            {
+                "type": "register_account",
+                "label": "Register from here: call register_account with your email",
+                "tool": "register_account",
+            },
+            {"type": "register", "label": "Register free for a higher ceiling", "url": register_url},
+        ]
+    if verify_email_url:
+        return [
+            {
+                "type": "verify_email",
+                "label": "Verify your email to move to the Free plan",
+                "url": verify_email_url,
+            }
+        ]
+    return []
+
+
+def allowance_exhausted_payload(exc: HpsiMcpAllowanceExhaustedError, *, symbol: str | None = None) -> dict[str, Any]:
+    """Map a spent free-evaluation allowance to its own error code.
+
+    The third refusal that arrives on 402, and the only one money does not
+    resolve: `insufficient_credits` says "top up", `payment_required` says
+    "settle this offer", and this one says "tell us who you are". Three
+    remedies an agent cannot pick between from a status code alone.
+
+    Before it had a branch of its own it fell through to `http_error` — no
+    `error`, no `next_actions`, and none of `calls_used` / `calls_allowed` /
+    `calls_allowed_next` / `window_days`, leaving a caller with prose to
+    pattern-match and a ceiling whose shape it could not see. On an SDK older
+    than 0.14.0 it arrived as `payment_required` instead, which told a caller
+    who owes nothing to configure a wallet.
+    """
+    body = exc.body if isinstance(exc.body, dict) else {}
+    verify_email_url = _allowance_verify_email_url(exc)
+    payload = error_payload(
+        "allowance_exhausted",
+        str(exc),
+        status_code=exc.status_code or 402,
+        symbol=symbol,
+    )
+    # The wire value the API sends, not the local error code: a client that
+    # already discriminates on `error` reads the same string here as it would
+    # straight off the hosted response.
+    payload["error"] = "anonymous_allowance_exhausted"
+    for field, value in (
+        ("calls_used", exc.calls_used),
+        ("calls_allowed", exc.calls_allowed),
+        # Absent for a caller already on the registered rung — there is no
+        # higher free ceiling to name, and inventing one promises nothing.
+        ("calls_allowed_next", exc.calls_allowed_next),
+        ("window_days", exc.window_days),
+        # At most one of these two is ever set. `register` is for a caller with
+        # no account; `verify_email` is for one whose address is unconfirmed,
+        # and telling them to sign up again produces a second account, not a fix.
+        ("register", exc.register_url),
+        ("verify_email", verify_email_url),
+    ):
+        if value is not None:
+            payload[field] = value
+    if "tool" in body:
+        payload["tool"] = body["tool"]
+    # Always stated, always 0 on a refusal, for the same reason as the Credits
+    # refusal: "nothing was charged" should be read, not inferred.
+    payload["credits_charged"] = 0
+    payload["next_actions"] = _allowance_next_actions(
+        body, register_url=exc.register_url, verify_email_url=verify_email_url
+    )
     return payload
 
 
@@ -545,6 +660,18 @@ class QuantFinanceService:
                 payload = insufficient_credits_payload(exc, symbol=normalized_symbol)
                 self._trip_insufficient_credits_circuit(api_key, payload)
                 return payload
+            # Next to the Credits refusal because they arrive on the same status
+            # and are told apart only by the body, and ahead of the plain
+            # `HpsiMcpAPIError` handler below, which is what used to catch this
+            # and report an untyped `http_error`.
+            #
+            # No circuit, unlike the Credits refusal above. The remedy here is a
+            # tool this same process exposes: `register_account` lifts the
+            # ceiling for the key already configured, so the very next call is
+            # one that would now succeed. A 60-second latch would refuse it
+            # locally and make registering look like it did nothing.
+            except HpsiMcpAllowanceExhaustedError as exc:
+                return allowance_exhausted_payload(exc, symbol=normalized_symbol)
             except HpsiMcpConfigError as exc:
                 message = str(exc)
                 status_code = 402 if "402" in message else 401 if "401" in message else None
@@ -619,7 +746,7 @@ class QuantFinanceService:
             if (
                 result.get("error") == "api_key_required"
                 or result.get("status_code") in {401, 402, 403}
-                or result.get("error_code") in {"insufficient_credits", "settlement_unknown"}
+                or result.get("error_code") in {"allowance_exhausted", "insufficient_credits", "settlement_unknown"}
             ):
                 break
         return results
@@ -662,6 +789,12 @@ class QuantFinanceService:
             return normalize_success_payload(result)
         except HpsiMcpInsufficientCreditsError as exc:
             return insufficient_credits_payload(exc)
+        # Registering is the remedy for this refusal, so it should never refuse
+        # registering. Classified anyway: if the hosted API ever does answer it
+        # here, the caller reads the ceiling and its remaining remedy instead of
+        # an untyped `http_error` on the one call that was supposed to help.
+        except HpsiMcpAllowanceExhaustedError as exc:
+            return allowance_exhausted_payload(exc)
         except HpsiMcpConfigError as exc:
             message = str(exc)
             status_code = 402 if "402" in message else 401 if "401" in message else None

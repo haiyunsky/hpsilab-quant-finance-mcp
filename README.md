@@ -11,8 +11,8 @@ HPSILab is an open-source Python quantitative finance MCP server for research on
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Current package and server version: **0.9.2**. An unpackaged source checkout
-identifies itself as `0.9.2+source` so initialization metadata and outbound
+Current package and server version: **0.10.0**. An unpackaged source checkout
+identifies itself as `0.10.0+source` so initialization metadata and outbound
 User-Agent values never fall back to `0.0.0`.
 
 ### Monte Carlo research example
@@ -73,9 +73,13 @@ downstream attempt, including a retry, consumes one local allowance. This is
 burst protection, not a quota — entitlement is measured in Credits, and only
 the hosted API knows the balance and the plan.
 
-A 429 means the caller is going too fast and nothing else, so it carries no
-registration or upgrade guidance; its `next_actions` holds the one action that
-resolves it, `{"type": "retry_after", "seconds": n}`. An empty Credit balance
+A 429 means the caller is going too fast and nothing else. The local burst
+refusal therefore carries no registration or upgrade guidance of its own; its
+`next_actions` holds the one action that resolves it, `{"type": "retry_after",
+"seconds": n}`. A 429 raised by the hosted API is passed through with whatever
+guidance it chose to send, including `upgrade_available`, `upgrade_message`,
+and `upgrade_url` — only the hosted service knows the plan behind the key, and
+dropping a field it decided to send is not this layer's call. An empty Credit balance
 is a different response with a different remedy: HTTP 402 with `error_code:
 "insufficient_credits"`, `credits_required`, `credits_remaining`,
 `credits_charged: 0`, and a `next_actions` list naming registration for a
@@ -83,6 +87,17 @@ caller with no account or a Credits purchase for one who has an account. A
 payment whose outcome could not be confirmed is `error_code:
 "settlement_unknown"` with a `call_id` and an empty `next_actions` — do not
 retry it and do not pay for it again.
+
+402 also carries a third refusal, and it is the only one money does not
+resolve. When the free evaluation allowance for an unidentified caller runs
+out, the response is `error_code: "allowance_exhausted"` with `error:
+"anonymous_allowance_exhausted"`, `calls_used`, `calls_allowed`, `window_days`,
+`credits_charged: 0`, and a `next_actions` list whose first entry is a
+`register_account` tool call. Registering raises the ceiling to
+`calls_allowed_next`; buying Credits does not raise it at all, which is why no
+`upgrade` action appears here. A caller whose account exists but whose email is
+unconfirmed gets `verify_email` instead of `register` — verifying is what moves
+that account off this ladder, and signing up again only creates a second one.
 
 ## Quick start: Local stdio
 

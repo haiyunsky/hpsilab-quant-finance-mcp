@@ -6,6 +6,69 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-28
+
+The hosted API began answering a third refusal on HTTP 402 on 2026-08-27, and
+this package could not tell it from the other two. Registering — free, and the
+one thing that resolves it — was never named.
+
+### Fixed
+
+- **A spent free evaluation allowance was reported as an untyped `http_error`**
+  for anyone running `hpsilab-mcp` 0.14.0 or later, and as `payment_required`
+  on the releases before it. The refusal (`error:
+  "anonymous_allowance_exhausted"`) has no `accepts` and never will, because
+  there is nothing to sell a caller who has not said who it is; read as a
+  payment challenge it told that caller to configure a wallet, and read as a
+  generic HTTP error it discarded `calls_used`, `calls_allowed`,
+  `window_days`, and the `next_actions` list carrying the free remedy. Both
+  reached the exact population the ceiling exists to convert.
+
+### Added
+
+- `allowance_exhausted` — the free evaluation ceiling is reported under its own
+  error code with `calls_used`, `calls_allowed`, `calls_allowed_next`,
+  `window_days`, `credits_charged: 0`, and `next_actions`. The API's own remedy
+  list is passed through untouched; only it knows whether this caller should
+  register or verify an address it has already given us. The local fallback
+  leads with the `register_account` tool rather than the signup URL, so an
+  agent can take the remedy in one call with no browser and no human.
+- No `upgrade` action and no `upgrade_url` appear in this payload, even though
+  the hosted body carries them. Money buys an unidentified caller no further
+  anonymous calls, and a price listed ahead of a free remedy is what the API's
+  `next_actions` ordering exists to prevent.
+- `call_batch` stops on it by error code as well as by status: the ceiling is
+  not per-symbol, so every remaining symbol would spend a request rediscovering
+  it.
+- A hosted 429 now preserves `upgrade_available`, `upgrade_message`, and
+  `upgrade_url` alongside the quota metadata it already passed through. The
+  burst refusal this package raises locally still carries no upsell of its own
+  — waiting is what resolves that one — but only the hosted service can see the
+  plan behind the key, and dropping a field it chose to send is not this
+  layer's decision. README and `docs/python-sdk.md` said a 429 carries no
+  upgrade guidance at all; both now distinguish the two.
+
+### Changed
+
+- Raised the minimum `hpsilab-mcp` REST SDK version to 0.14.0, the release that
+  raises `HpsiMcpAllowanceExhaustedError` instead of a payment error. This
+  package now imports that class directly.
+- The allowance refusal deliberately opens **no** local circuit, unlike the
+  Credits refusal. Its remedy is a tool this same process exposes, and
+  `register_account` lifts the ceiling for the API key already configured — a
+  60-second latch would refuse the very next call, which is the one that would
+  now succeed, and make registering look like it did nothing.
+
+### Known issues
+
+- `verify_email` is read from the response body rather than from the SDK's
+  sanitized `HpsiMcpAllowanceExhaustedError.verify_email_url`. That attribute
+  is always `None` in `hpsilab-mcp` 0.14.0: the verification link is the
+  hpsilab.com site root, and the SDK's public-URL allowlist admits only
+  `/register` and `/pricing`. The same URL rides in `next_actions` untouched
+  regardless, so withholding the top-level field would have hidden a remedy the
+  payload publishes two lines further down.
+
 ## [0.9.2] - 2026-08-11
 
 ### Fixed

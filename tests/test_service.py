@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from hpsilab_mcp import (
+    HpsiMcpAllowanceExhaustedError,
     HpsiMcpAPIError,
     HpsiMcpAuthError,
     HpsiMcpConnectionError,
@@ -28,6 +29,7 @@ from hpsilab_quant_finance_mcp.service import (
     USER_AGENT,
     QuantFinanceClient,
     QuantFinanceService,
+    allowance_exhausted_payload,
     downstream_rate_limit_payload,
     error_payload,
     insufficient_credits_payload,
@@ -132,6 +134,9 @@ class ServiceTests(unittest.TestCase):
             "window": "minute",
             "retry_after_seconds": 23,
             "next_actions": [{"type": "retry_after", "seconds": 23}],
+            "upgrade_available": True,
+            "upgrade_message": "Need higher limits? Upgrade for higher API rate limits.",
+            "upgrade_url": "https://hpsilab.com/pricing",
         }
         error = HpsiMcpRateLimitError("slow down", status_code=429, body=body)
 
@@ -140,6 +145,9 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(result["error"], "rate_limit_exceeded")
         self.assertEqual(result["limit"], 10)
         self.assertEqual(result["next_actions"], body["next_actions"])
+        self.assertIs(result["upgrade_available"], True)
+        self.assertEqual(result["upgrade_message"], body["upgrade_message"])
+        self.assertEqual(result["upgrade_url"], body["upgrade_url"])
 
     def test_service_reuses_client_so_401_breaker_blocks_five_tool_sequence_locally(self):
         requests = 0
@@ -429,6 +437,195 @@ class ServiceTests(unittest.TestCase):
         )
 
         self.assertEqual(payload["next_actions"], verify)
+
+    def test_allowance_exhausted_is_neither_a_price_nor_an_empty_balance(self):
+        # The third refusal on 402, and the only one money does not resolve.
+        # Reported as `payment_required` it tells a caller who owes nothing to
+        # configure a wallet; reported as `http_error` it drops every number
+        # that says how far past the ceiling this caller is.
+        payload = allowance_exhausted_payload(
+            HpsiMcpAllowanceExhaustedError(
+                "Anonymous access is 300 calls per 7 days and 301 have been used.",
+                status_code=402,
+                body={"error": "anonymous_allowance_exhausted", "tool": "get_monte_carlo"},
+                calls_used=301,
+                calls_allowed=300,
+                calls_allowed_next=1000,
+                window_days=7,
+                register_url="https://hpsilab.com/register",
+            ),
+            symbol="NVDA",
+        )
+
+        self.assertEqual(payload["error_code"], "allowance_exhausted")
+        self.assertEqual(payload["error"], "anonymous_allowance_exhausted")
+        self.assertEqual(payload["status_code"], 402)
+        self.assertEqual(payload["symbol"], "NVDA")
+        self.assertEqual(payload["calls_used"], 301)
+        self.assertEqual(payload["calls_allowed"], 300)
+        self.assertEqual(payload["calls_allowed_next"], 1000)
+        self.assertEqual(payload["window_days"], 7)
+        self.assertEqual(payload["tool"], "get_monte_carlo")
+        self.assertEqual(payload["credits_charged"], 0)
+        self.assertEqual(payload["register"], "https://hpsilab.com/register")
+        # A wallet has nothing to sign here, and waiting earns nothing back.
+        self.assertNotIn("accepts", payload)
+        self.assertNotIn("retry_after_seconds", payload)
+        self.assertNotIn("verify_email", payload)
+
+    def test_allowance_exhausted_for_an_unverified_account_never_says_sign_up_again(self):
+        # One rung up: the account exists, its address is unconfirmed, and it
+        # is still on the anonymous quota row. Signing up again makes a second
+        # account instead of fixing the first, so `register` must be absent —
+        # and there is no higher free ceiling left to name.
+        #
+        # The verification link is the site root, which the SDK's public-URL
+        # allowlist (`/register` and `/pricing` only) drops: this is the real
+        # shape of the refusal, with the attribute already `None` before the
+        # payload is built, and the body is where the URL survives.
+        exc = HpsiMcpAllowanceExhaustedError(
+            "Registered access is 1000 calls per 7 days and 1004 have been used.",
+            status_code=402,
+            body={
+                "error": "anonymous_allowance_exhausted",
+                "email_verified": False,
+                "verify_email": "https://hpsilab.com/",
+            },
+            calls_used=1004,
+            calls_allowed=1000,
+            window_days=7,
+            verify_email_url="https://hpsilab.com/",
+        )
+        self.assertIsNone(exc.verify_email_url)
+
+        payload = allowance_exhausted_payload(exc)
+
+        self.assertEqual(payload["verify_email"], "https://hpsilab.com/")
+        self.assertNotIn("register", payload)
+        self.assertNotIn("calls_allowed_next", payload)
+        self.assertEqual(
+            payload["next_actions"],
+            [
+                {
+                    "type": "verify_email",
+                    "label": "Verify your email to move to the Free plan",
+                    "url": "https://hpsilab.com/",
+                }
+            ],
+        )
+
+    def test_allowance_fallback_actions_lead_with_the_in_process_remedy_and_no_price(self):
+        # `upgrade_url` rides along in the body of every one of these refusals.
+        # It must not become an action: money buys an unidentified caller no
+        # further anonymous calls, and a price listed ahead of the free remedy
+        # is what the ordering exists to prevent. The first action names the
+        # tool this package exposes — an agent takes it without a browser.
+        payload = allowance_exhausted_payload(
+            HpsiMcpAllowanceExhaustedError(
+                "allowance spent",
+                status_code=402,
+                body={
+                    "error": "anonymous_allowance_exhausted",
+                    "upgrade_url": "https://hpsilab.com/pricing",
+                    "upgrade_hint": "Upgrade at https://hpsilab.com/pricing",
+                },
+                calls_used=301,
+                calls_allowed=300,
+                register_url="https://hpsilab.com/register",
+            )
+        )
+
+        self.assertEqual(payload["next_actions"][0]["type"], "register_account")
+        self.assertEqual(payload["next_actions"][0]["tool"], "register_account")
+        self.assertNotIn("upgrade", {action["type"] for action in payload["next_actions"]})
+        self.assertNotIn("upgrade_url", payload)
+        self.assertNotIn("upgrade_hint", payload)
+
+    def test_hosted_allowance_actions_win_over_the_local_fallback(self):
+        # Only the API knows which rung this caller is on and which of
+        # register / verify applies to it.
+        hosted = [{"type": "verify_email", "label": "Verify your email", "url": "https://hpsilab.com/"}]
+        payload = allowance_exhausted_payload(
+            HpsiMcpAllowanceExhaustedError(
+                "allowance spent",
+                status_code=402,
+                body={"error": "anonymous_allowance_exhausted", "next_actions": hosted},
+                calls_used=1004,
+                calls_allowed=1000,
+                register_url="https://hpsilab.com/register",
+            )
+        )
+
+        self.assertEqual(payload["next_actions"], hosted)
+
+    def test_allowance_exhausted_does_not_latch_the_call_that_registering_enables(self):
+        # The remedy is a tool this same process exposes, and it lifts the
+        # ceiling for the key already configured. A local circuit like the
+        # Credits one would refuse the very next call — the one that would now
+        # succeed — and make registering look like it did nothing.
+        registered = {"value": False}
+
+        def handler(request):
+            if request.url.path.endswith("/register"):
+                registered["value"] = True
+                return httpx.Response(200, json={"email": "you@example.com", "api_key": "hpsi_new"})
+            if registered["value"]:
+                return httpx.Response(200, json={"symbol": "PINS"})
+            return httpx.Response(
+                402,
+                json={
+                    "error": "anonymous_allowance_exhausted",
+                    "message": "Anonymous access is 300 calls per 7 days and 301 have been used.",
+                    "calls_used": 301,
+                    "calls_allowed": 300,
+                    "calls_allowed_next": 1000,
+                    "window_days": 7,
+                    "register": "https://hpsilab.com/register",
+                },
+            )
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
+        service = QuantFinanceService(client_factory=factory)
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_anon"}, clear=True):
+            refused = service.call("get_ai_prediction", "PINS")
+            signup = service.register_account("you@example.com")
+            after = service.call("get_ai_prediction", "PINS")
+
+        self.assertEqual(refused["error_code"], "allowance_exhausted")
+        self.assertEqual(refused["next_actions"][0]["type"], "register_account")
+        self.assertEqual(signup["status"], "success")
+        self.assertNotIn("circuit_open", after)
+        self.assertEqual(after["status"], "success")
+        service.close()
+
+    def test_batch_stops_before_repeating_an_allowance_refusal(self):
+        # Every remaining symbol pays a request to rediscover a ceiling that
+        # is not per-symbol.
+        requests = []
+
+        def handler(request):
+            requests.append(request)
+            return httpx.Response(
+                402,
+                json={
+                    "error": "anonymous_allowance_exhausted",
+                    "calls_used": 301,
+                    "calls_allowed": 300,
+                    "register": "https://hpsilab.com/register",
+                },
+            )
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
+        service = QuantFinanceService(client_factory=factory)
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_anon"}, clear=True):
+            results = service.call_batch("get_iv_radar", ["PINS", "AMZN", "NVDA"])
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["error_code"], "allowance_exhausted")
+        self.assertEqual(len(requests), 1)
+        service.close()
 
     def test_settlement_unknown_offers_nothing_and_keeps_the_call_id(self):
         payload = settlement_unknown_payload(

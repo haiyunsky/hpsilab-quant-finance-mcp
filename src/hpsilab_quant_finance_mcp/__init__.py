@@ -3,7 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-_FALLBACK_VERSION = "0.9.2+source"
+_FALLBACK_VERSION = "0.10.0+source"
 
 
 def _load_version() -> str:
