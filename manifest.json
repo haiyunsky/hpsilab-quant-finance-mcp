@@ -50,7 +50,7 @@
     },
     {
       "name": "register_account",
-      "description": "Legacy compatibility operation; new users register at https://hpsilab.com/register"
+      "description": "Register the calling agent's account to lift the free evaluation ceiling; requires an existing API key"
     }
   ]
 }

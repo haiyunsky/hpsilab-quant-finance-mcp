@@ -1,6 +1,6 @@
 # Tool reference
 
-The HPSILab product surface contains 9 public financial research tools. Tool names and parameter meanings are part of the public compatibility contract.
+The HPSILab product surface contains 9 public financial research tools and one account tool, `register_account`. Tool names and parameter meanings are part of the public compatibility contract.
 
 ## Financial research tools
 
@@ -19,6 +19,26 @@ The HPSILab product surface contains 9 public financial research tools. Tool nam
 All financial research tools require a valid API key. They accept one US-listed equity or ETF ticker, such as `NVDA`, `AAPL`, `SPY`, or `BRK.B`. Do not pass a company name. Coverage of options-dependent fields varies by symbol and account tier.
 
 Live research output may change between calls. Generated URLs can expire. Clients should surface structured errors and nullable/unavailable fields rather than inventing replacements.
+
+## Account tool
+
+| Tool | Use it for | Key output semantics | Side effects |
+| --- | --- | --- | --- |
+| `register_account` | Obtaining credentials for the calling agent, and lifting the free evaluation ceiling | Registered address, plan tier, `email_verified`, an `api_key` to set as `HPSILAB_API_KEY`, and `already_registered` | Creates an account and sends a verification email; not idempotent (a repeat call returns the same account with a fresh key) |
+
+It requires a valid `HPSILAB_API_KEY` like every other tool; without one it
+returns the same `api_key_required` prompt and sends no request. Genuinely new
+users register at [https://hpsilab.com/register](https://hpsilab.com/register).
+
+This is the first entry in the `next_actions` list of an `allowance_exhausted`
+refusal, because it is the one remedy an agent can take by itself: one call,
+one email address, no browser and no human. The account it creates is
+**unverified**, which keeps the caller on the anonymous allowance until the
+emailed link is clicked; confirming it unlocks the full Free plan. Tell the
+operator to click that link.
+
+An address that already belongs to a different account is refused. An agent
+cannot attach itself to someone else's account.
 
 ## Choosing a tool
 

@@ -28,7 +28,7 @@ flowchart LR
 ### `server.py`
 
 - owns MCP server metadata and tool registration;
-- The server currently registers 10 tools: 9 public research tools and one compatibility-only `register_account` tool.
+- The server currently registers 10 tools: 9 public research tools and `register_account`, which is the in-band remedy named first in the `next_actions` of an `allowance_exhausted` refusal.
 - converts structured service errors into MCP `CallToolResult` objects with `isError: true`;
 - selects stdio or Streamable HTTP at process startup;
 - exposes an ASGI app factory for external HTTP hosting.

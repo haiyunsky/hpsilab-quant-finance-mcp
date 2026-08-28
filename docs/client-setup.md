@@ -66,7 +66,7 @@ If the installed client version supports Streamable HTTP with custom bearer head
 
 ## Verification
 
-After connecting, confirm the 9 public financial research tools are available, then run:
+After connecting, confirm all 10 tools are available — the 9 financial research tools plus `register_account` — then run:
 
 ```text
 Use HPSILab to analyze AAPL. Return the overall signal, confidence, strongest

@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- The README rendered wrong wherever it is actually read. The three badges sat
+  on the line directly below a blockquote with no blank line between them, so
+  Markdown's lazy continuation pulled them inside the quote. The example image
+  and the `LICENSE`, `AGENTS.md`, and `CONTRIBUTING.md` links were relative,
+  which resolves on GitHub and breaks on PyPI, where this file is the package
+  long description. The `docs/tools.md#get_monte_carlo` anchor has never
+  existed — tool names live in table cells, and anchors come from headings.
+- The documented tool surface was one short. `tools/list` and `manifest.json`
+  both advertise 10 tools; README, `docs/tools.md`, and `docs/client-setup.md`
+  described 9 and omitted `register_account` entirely. `docs/tools.md` now has
+  a section for it, and `docs/architecture.md` no longer calls it
+  compatibility-only — it is the first entry in an `allowance_exhausted`
+  refusal's `next_actions`.
+- `manifest.json` still described `register_account` as a "Legacy
+  compatibility operation", which stopped being true in 0.10.0.
+
+### Changed
+
+- Reorganized the README around what a registry or catalog visitor needs
+  first: a facts table (registry name, version, transports, endpoint, install,
+  auth, tool count), then the two transports, then tools. The error-contract
+  reference that had accumulated inside the hosted quick start is now a
+  five-row table at the end, pointing at `docs/authentication.md` and
+  `docs/python-sdk.md`, which carry the same material in full.
+
 ## [0.10.0] - 2026-08-28
 
 The hosted API began answering a third refusal on HTTP 402 on 2026-08-27, and
