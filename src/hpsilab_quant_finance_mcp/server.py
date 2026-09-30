@@ -263,30 +263,36 @@ def get_option_pressure(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]
 @mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
 def get_monte_carlo(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
-    Run a Monte Carlo price-path simulation for a stock over a 30-day horizon.
+    Run a Monte Carlo price-path simulation for a stock over the next 10
+    trading days.
 
     Use this tool when:
     - You need a probabilistic price range rather than a single point estimate.
-    - You want to quantify downside risk (e.g., probability of a 10 % drawdown).
+    - You want the odds of finishing above recent resistance or below support.
     - You are sizing a position using a volatility-adjusted scenario.
 
     The simulation uses a GBM (Geometric Brownian Motion) model calibrated with
-    the stock's realized volatility and current IV.  10,000 paths are run by
-    default.
+    the stock's historical daily log-return drift and volatility (not implied
+    volatility). 5,000 paths are run.
 
     Returns
     -------
     dict with keys:
-        symbol         : str   — normalized ticker
-        current_price  : float — spot price at simulation start
-        mean_price     : float — expected price at horizon
-        range_90       : dict  — {"lower": float, "upper": float} 90 % CI
-        range_68       : dict  — {"lower": float, "upper": float} 68 % CI
-        prob_above_spot: float — probability (0–1) price is above current spot
-        prob_10pct_drop: float — probability (0–1) of ≥10 % decline
-        distribution   : dict  — histogram data:
-                                 {"bins": list, "frequencies": list,
-                                  "kde_x": list, "kde_y": list}
+        ticker       : str   — normalized ticker
+        horizon_days : int   — simulation horizon in trading days (10)
+        ci           : float — confidence level of lower/upper_bound (0.90)
+        lower_bound  : float — lower edge of the central `ci` price range
+        upper_bound  : float — upper edge of the central `ci` price range
+        mean_price   : float — mean simulated price at horizon
+        median_price : float — median simulated price at horizon
+        support      : float — 20-day rolling low
+        resistance   : float — 20-day rolling high (also returned as `threshold`)
+        prob_above   : float — probability (0–1) the horizon price exceeds `resistance`
+        prob_below   : float — 1 - prob_above
+        volatility   : float — daily log-return standard deviation
+        std_tomorrow : float — one-day price standard deviation (spot × volatility)
+        final_prices : list  — every simulated horizon price
+        msg          : str   — one-line plain-English summary
     """
     return _call("get_monte_carlo", symbol)
 
@@ -407,7 +413,7 @@ def generate_stock_research_report(
       2. AI Prediction       — ensemble model votes, up-probability, regime
       3. Volatility Analysis — ATM IV, IV rank, vol regime, risk reversal
       4. Options Positioning — max pain, gamma wall, expected move, squeeze targets
-      5. Monte Carlo Outlook — 30-day price distribution, 90 %/68 % confidence ranges
+      5. Monte Carlo Outlook — 10-trading-day price distribution and 90 % range
       6. Strategy Backtests  — Sharpe, max drawdown, win rate across quant strategies
 
     Output is a complete markdown string (~800–1200 words) ready to render or share.

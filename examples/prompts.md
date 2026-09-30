@@ -25,7 +25,7 @@ Use HPSILab option pressure for TSLA. Identify max pain, gamma wall, expected mo
 ## Probability And Risk
 
 ```text
-Run a HPSILab Monte Carlo simulation for QQQ. Report the 68% and 90% ranges, probability of finishing above spot, and probability of a 10% drawdown.
+Run a HPSILab Monte Carlo simulation for QQQ. Report the 10-day 90% range, the mean and median price, and the probability of finishing above resistance.
 ```
 
 ```text

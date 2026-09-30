@@ -10,7 +10,7 @@ The HPSILab product surface contains 9 public financial research tools and one a
 | `get_ai_prediction` | Next-session directional model analysis | Prediction, up probability, confidence, model votes, regime, and signal strength | Read-only and idempotent |
 | `get_iv_radar` | Historical context for implied volatility | ATM IV, IV rank, IV percentile, skew, term structure, and regime | Read-only and idempotent |
 | `get_option_pressure` | Important options-derived price levels | Max pain, gamma wall, expected move, squeeze targets, and strike concentrations | Read-only and idempotent |
-| `get_monte_carlo` | Scenario analysis for a 30-day horizon | Simulated mean, 68% and 90% ranges, upside probability, and downside probability | Read-only and idempotent |
+| `get_monte_carlo` | Scenario analysis for a 10-trading-day horizon | Simulated mean and median, 90% range, and probability of finishing above resistance or below it | Read-only and idempotent |
 | `get_equity_curve` | Comparing standard strategy backtests | Returns, Sharpe and Sortino ratios, drawdown, win rate, and equity curves | Read-only and idempotent |
 | `get_pretrade_risk_scan` | Reviewing a proposed position before a trade | Volatility, beta, VaR, drawdown, position size, exposure, correlation, checks, and warnings | Read-only and idempotent |
 | `generate_stock_images` | Creating charts for an analysis workflow | Hosted image artifacts and URLs | Creates artifacts; not idempotent; may consume quota |

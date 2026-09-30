@@ -16,7 +16,7 @@ returned options expiry. Do not predict the earnings result.
 
 ```text
 For NVDA, use HPSILab's Monte Carlo, IV radar, and option-pressure tools. Compare
-the 30-day simulated range with the options-implied expected move. Explain that
+the 10-day simulated range with the options-implied expected move. Explain that
 the horizons and methods may differ. Present upside, central, and downside
 scenarios without assigning an earnings surprise that the tools did not provide.
 ```

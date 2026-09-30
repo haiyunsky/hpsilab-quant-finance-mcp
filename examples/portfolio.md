@@ -33,7 +33,7 @@ optimization.
 
 ```text
 For SPY, QQQ, and IWM, call HPSILab's IV radar and Monte Carlo tools sequentially.
-Build a dashboard with volatility regime, 68% range, 90% range, probability above
-spot, and probability of a 10% drop. Use the response timestamps when available.
+Build a dashboard with volatility regime, the 10-day 90% range, and the probability
+of finishing above resistance. Use the response timestamps when available.
 ```
 

@@ -10,7 +10,7 @@ Use HPSILab to analyze NVDA. Return:
 2. strongest bullish and bearish factors;
 3. AI model consensus;
 4. IV regime and important options levels;
-5. 30-day Monte Carlo 68% and 90% ranges;
+5. 10-day Monte Carlo 90% range;
 6. the three most important limitations or risks.
 Separate tool data from your interpretation. Do not recommend a trade.
 ```
