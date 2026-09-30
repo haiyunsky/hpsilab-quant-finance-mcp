@@ -33,9 +33,9 @@ users register at [https://hpsilab.com/register](https://hpsilab.com/register).
 This is the first entry in the `next_actions` list of an `allowance_exhausted`
 refusal, because it is the one remedy an agent can take by itself: one call,
 one email address, no browser and no human. The account it creates is
-**unverified**, which keeps the caller on the anonymous allowance until the
-emailed link is clicked; confirming it unlocks the full Free plan. Tell the
-operator to click that link.
+**unverified**, with only a capped evaluation allowance and no trial Credits,
+until the emailed link is clicked; confirming it grants the one-time
+100-Credit Registered Trial (14 days). Tell the operator to click that link.
 
 An address that already belongs to a different account is refused. An agent
 cannot attach itself to someone else's account.

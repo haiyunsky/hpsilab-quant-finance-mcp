@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- `register_account` said confirming the email "unlocks the full Free plan" and
+  that an unverified account keeps a daily allowance — wording from the
+  request-count model the API no longer enforces. Its description and
+  `docs/tools.md` now say what confirmation does: it grants the one-time
+  100-Credit Registered Trial (14 days); until then the account has only a
+  capped evaluation allowance and no trial Credits.
 - `get_monte_carlo` was documented as a 30-day, 10,000-path simulation
   calibrated with implied volatility, returning `range_68`, `prob_above_spot`,
   `prob_10pct_drop`, and a histogram. The hosted service runs 5,000 paths over

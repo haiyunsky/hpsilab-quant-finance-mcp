@@ -663,9 +663,10 @@ def register_account(
     caller server-side, so calls from here are recognised even before the
     environment variable is updated.
 
-    The account is created **unverified**, which keeps the anonymous daily
-    allowance until the emailed link is confirmed; confirming it unlocks the
-    full Free plan. Tell the operator to click that link.
+    The account is created **unverified**, with only a capped evaluation
+    allowance and no trial Credits, until the emailed link is confirmed;
+    confirming it grants the one-time 100-Credit Registered Trial (14 days).
+    Tell the operator to click that link.
 
     Calling again returns the same account and a fresh key rather than creating
     a second one, so it is safe to retry if a key was lost. An address that
