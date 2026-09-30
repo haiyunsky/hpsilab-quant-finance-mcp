@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- `get_monte_carlo` was documented as a 30-day, 10,000-path simulation
+  calibrated with implied volatility, returning `range_68`, `prob_above_spot`,
+  `prob_10pct_drop`, and a histogram. The hosted service runs 5,000 paths over
+  10 trading days on historical volatility and returns none of those fields.
+  The tool description, README, `docs/`, and `examples/` now describe the
+  response the service actually sends (`horizon_days`, `lower_bound` /
+  `upper_bound` at `ci` = 0.90, `prob_above` resistance, `final_prices`).
 - The README rendered wrong wherever it is actually read. The three badges sat
   on the line directly below a blockquote with no blank line between them, so
   Markdown's lazy continuation pulled them inside the quote. The example image

@@ -31,7 +31,7 @@ All financial research tools require a valid API key. Configure it as the bearer
 
 ```text
 Use HPSILab to analyze NVDA. Summarize the overall signal, confidence, IV regime,
-options pressure, 30-day Monte Carlo range, and major risks. Cite the tool outputs
+options pressure, 10-day Monte Carlo range, and major risks. Cite the tool outputs
 and distinguish observed data from your interpretation.
 ```
 

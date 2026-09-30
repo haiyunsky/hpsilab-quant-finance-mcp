@@ -79,8 +79,8 @@ metrics for a developer who understands finance but is new to options flow.
 ```
 
 ```text
-Run a Monte Carlo analysis for META and turn the returned 68% and 90% ranges
-and downside probability into a concise scenario table.
+Run a Monte Carlo analysis for META and turn the returned 10-day 90% range
+and the probability of finishing above resistance into a concise scenario table.
 ```
 
 ## Troubleshooting

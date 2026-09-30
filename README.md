@@ -114,7 +114,7 @@ meanings are part of the public compatibility contract.
 | `get_ai_prediction` | Next-session prediction, confidence, and model consensus | Read-only |
 | `get_iv_radar` | IV level, rank, percentile, skew, and regime | Read-only |
 | `get_option_pressure` | Max pain, gamma walls, expected move, and pressure zones | Read-only |
-| `get_monte_carlo` | 30-day simulated distribution and probabilities | Read-only |
+| `get_monte_carlo` | 10-trading-day simulated distribution and probabilities | Read-only |
 | `get_equity_curve` | Strategy backtests and risk-adjusted performance | Read-only |
 | `get_pretrade_risk_scan` | Position, exposure, correlation, and risk checks | Read-only |
 | `generate_stock_images` | Hosted stock and options chart artifacts | Creates an artifact; not idempotent |
@@ -143,7 +143,7 @@ for tool details.
 
 ```text
 Use HPSILab to analyze NVDA. Summarize the directional signal, AI model
-consensus, IV regime, options pressure, 30-day Monte Carlo range, and the
+consensus, IV regime, options pressure, 10-day Monte Carlo range, and the
 three most important risks. Distinguish tool data from interpretation.
 ```
 
