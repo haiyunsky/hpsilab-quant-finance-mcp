@@ -479,10 +479,10 @@ class ServiceTests(unittest.TestCase):
         # account instead of fixing the first, so `register` must be absent —
         # and there is no higher free ceiling left to name.
         #
-        # The verification link is the site root, which the SDK's public-URL
-        # allowlist (`/register` and `/pricing` only) drops: this is the real
-        # shape of the refusal, with the attribute already `None` before the
-        # payload is built, and the body is where the URL survives.
+        # The verification link is the site root. hpsilab-mcp 0.14.1+ admits
+        # the root through its public-URL allowlist (0.14.0 dropped it and the
+        # body was the only place the URL survived), so the attribute and the
+        # body agree and the payload carries the link either way.
         exc = HpsiMcpAllowanceExhaustedError(
             "Registered access is 1000 calls per 7 days and 1004 have been used.",
             status_code=402,
@@ -496,7 +496,7 @@ class ServiceTests(unittest.TestCase):
             window_days=7,
             verify_email_url="https://hpsilab.com/",
         )
-        self.assertIsNone(exc.verify_email_url)
+        self.assertEqual(exc.verify_email_url, "https://hpsilab.com/")
 
         payload = allowance_exhausted_payload(exc)
 
