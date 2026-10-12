@@ -119,7 +119,7 @@ meanings are part of the public compatibility contract.
 | `get_pretrade_risk_scan` | Position, exposure, correlation, and risk checks | Read-only |
 | `generate_stock_images` | Hosted stock and options chart artifacts | Creates an artifact; not idempotent |
 | `generate_stock_research_report` | Structured Markdown research report and timestamp | Creates an artifact; not idempotent |
-| `register_account` | Account credentials for the authenticated caller | Creates an account and sends email; not idempotent |
+| `register_account` | Signing up from the client with no API key yet, or a fresh key for an existing account | Creates an account and sends email; not idempotent |
 
 Research tools accept one exchange ticker such as `NVDA`, `SPY`, or `BRK.B`;
 company names are not accepted. Live results can change between calls. Artifact

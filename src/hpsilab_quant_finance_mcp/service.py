@@ -42,6 +42,9 @@ SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Z0-9.-]{0,15}$")
 REGISTER_URL = "https://hpsilab.com/register"
 PRICING_URL = "https://hpsilab.com/pricing"
 DOCS_URL = "https://hpsilab.com/developer/v2"
+# Burst-limit identity for keyless registration. Not a credential: it only
+# groups every keyless register_account call under one local per-minute limit.
+ANONYMOUS_REGISTRATION_IDENTITY = "anonymous:register_account"
 DEFAULT_MAX_RETRIES = 2
 DEFAULT_INSUFFICIENT_CREDITS_TTL_SECONDS = 60.0
 USER_AGENT = f"hpsilab-python-sdk/{__version__}"
@@ -278,6 +281,32 @@ def insufficient_credits_payload(exc: HpsiMcpInsufficientCreditsError, *, symbol
     payload["credits_charged"] = 0
     payload["next_actions"] = _credits_next_actions(body, register_url=exc.register_url, upgrade_url=exc.upgrade_url)
     return payload
+
+
+def credits_refusal_from_payment_error(exc: HpsiMcpPaymentError) -> HpsiMcpInsufficientCreditsError | None:
+    """Recover the Credits refusal the SDK raised as a payment offer.
+
+    For a tool on the x402 allowlist, the API attaches a payment offer
+    (`accepts`) to its `insufficient_credits` 402, and the SDK raises any 402
+    with an offer as `HpsiMcpPaymentError` so a configured wallet can settle
+    it. This package never configures a wallet, so the offer is unusable here
+    and the body's own `error` is the accurate code. Returns None for a real
+    payment challenge.
+    """
+    body = exc.body if isinstance(exc.body, dict) else {}
+    if body.get("error") != "insufficient_credits":
+        return None
+    message = body.get("message") or body.get("error_message") or str(exc)
+    return HpsiMcpInsufficientCreditsError(
+        message,
+        status_code=exc.status_code or 402,
+        response_text=getattr(exc, "response_text", None),
+        body=body,
+        credits_required=body.get("credits_required"),
+        credits_remaining=body.get("credits_remaining"),
+        upgrade_url=body.get("upgrade_url"),
+        register_url=body.get("register"),
+    )
 
 
 def _allowance_verify_email_url(exc: HpsiMcpAllowanceExhaustedError) -> str | None:
@@ -683,6 +712,11 @@ class QuantFinanceService:
             # caller who touched a priced tool and lock it out of the free
             # ones it can still call.
             except HpsiMcpPaymentError as exc:
+                credits_refusal = credits_refusal_from_payment_error(exc)
+                if credits_refusal is not None:
+                    payload = insufficient_credits_payload(credits_refusal, symbol=normalized_symbol)
+                    self._trip_insufficient_credits_circuit(api_key, payload)
+                    return payload
                 return error_payload(
                     "payment_required", str(exc), status_code=exc.status_code, symbol=normalized_symbol
                 )
@@ -752,19 +786,24 @@ class QuantFinanceService:
         return results
 
     def register_account(self, email: str) -> dict[str, Any]:
-        """Register through an authenticated client; never bootstrap anonymously.
+        """Register a free account, with or without an API key configured.
 
-        Missing credentials return the same local `api_key_required` payload
-        as every financial tool, before validating input or constructing the
-        downstream client. New users register through the supplied HTTPS URL.
+        This tool exists for the caller that has no key yet, so it is the one
+        tool that does not stop at `api_key_required`. Two SDK entry points,
+        because `HpsiMcpClient` refuses to construct without an identity:
+
+        * **No key configured** — the standalone `hpsilab_mcp.register()`,
+          which needs no client instance. The local burst limit still applies,
+          under a fixed identity shared by every keyless registration.
+        * **A key is configured** — `client.register_account()` on the cached
+          client for that key, which returns the same account with a fresh key.
         """
         api_key = self._credential_provider.get_api_key()
-        if not api_key:
-            return api_key_required_payload()
 
-        local_failure = self._local_auth_failure(api_key)
-        if local_failure is not None:
-            return local_failure
+        if api_key:
+            local_failure = self._local_auth_failure(api_key)
+            if local_failure is not None:
+                return local_failure
 
         normalized_email = (email or "").strip()
         if "@" not in normalized_email or len(normalized_email) < 3:
@@ -776,11 +815,15 @@ class QuantFinanceService:
             )
 
         try:
-            violation = self._quota_limiter.check_and_consume(api_key, "register_account")
+            violation = self._quota_limiter.check_and_consume(
+                api_key or ANONYMOUS_REGISTRATION_IDENTITY, "register_account"
+            )
             if violation is not None:
                 return rate_limited_payload(violation)
-            client = self._client_for(api_key)
-            result = client.register_account(normalized_email)
+            if api_key:
+                result = self._client_for(api_key).register_account(normalized_email)
+            else:
+                result = self._register_fn(email=normalized_email)
             if not isinstance(result, dict):
                 return error_payload(
                     "invalid_response",
@@ -798,12 +841,16 @@ class QuantFinanceService:
         except HpsiMcpConfigError as exc:
             message = str(exc)
             status_code = 402 if "402" in message else 401 if "401" in message else None
-            self._trip_auth_circuit(api_key, status_code, message)
+            if api_key:
+                self._trip_auth_circuit(api_key, status_code, message)
             return error_payload("configuration_error", message, status_code=status_code)
         except HpsiMcpPaymentError as exc:
+            credits_refusal = credits_refusal_from_payment_error(exc)
+            if credits_refusal is not None:
+                return insufficient_credits_payload(credits_refusal)
             return error_payload("payment_required", str(exc), status_code=exc.status_code)
         except HpsiMcpAuthError as exc:
-            if exc.status_code in {401, 402}:
+            if api_key and exc.status_code in {401, 402}:
                 self._trip_auth_circuit(api_key, exc.status_code, str(exc))
             return error_payload("http_error", str(exc), status_code=exc.status_code)
         except HpsiMcpRateLimitError as exc:

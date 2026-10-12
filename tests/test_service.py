@@ -205,6 +205,50 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(requests, 3)
         service.close()
 
+    def test_credits_refusal_carrying_an_offer_is_insufficient_credits(self):
+        # For x402-allowlisted tools the API attaches `accepts` to its
+        # `insufficient_credits` 402, and the SDK raises that as a payment
+        # offer. This package has no wallet, so the body's own code wins, the
+        # status stays 402, and the Credits circuit opens as usual.
+        requests = 0
+
+        def handler(request):
+            nonlocal requests
+            requests += 1
+            return httpx.Response(
+                402,
+                json={
+                    "error": "insufficient_credits",
+                    "message": "This call costs 15 Credits and 1 remain. Add Credits by upgrading at https://hpsilab.com/pricing",
+                    "error_message": "This call costs 15 Credits and 1 remain.",
+                    "credits_required": 15,
+                    "credits_remaining": 1,
+                    "upgrade_url": "https://hpsilab.com/pricing",
+                    "tool": "get_pretrade_risk_scan",
+                    "accepts": [{"scheme": "exact", "network": "eip155:8453", "maxAmountRequired": "150000"}],
+                },
+            )
+
+        transport = httpx.MockTransport(handler)
+        factory = mock.Mock(side_effect=lambda **kwargs: QuantFinanceClient(transport=transport, **kwargs))
+        service = QuantFinanceService(client_factory=factory)
+        with mock.patch.dict(os.environ, {"HPSILAB_API_KEY": "hpsi_test"}, clear=True):
+            refused = service.call("get_pretrade_risk_scan", "AAPL")
+            blocked = service.call("get_pretrade_risk_scan", "NVDA")
+
+        self.assertEqual(refused["error_code"], "insufficient_credits")
+        self.assertEqual(refused["error"], "insufficient_credits")
+        self.assertEqual(refused["status_code"], 402)
+        self.assertEqual(refused["credits_required"], 15)
+        self.assertEqual(refused["credits_remaining"], 1)
+        self.assertEqual(refused["credits_charged"], 0)
+        self.assertEqual(refused["upgrade_url"], "https://hpsilab.com/pricing")
+        self.assertNotIn("wallet", refused["message"].lower())
+        self.assertEqual(refused["next_actions"][0]["url"], "https://hpsilab.com/pricing")
+        self.assertTrue(blocked["circuit_open"])
+        self.assertEqual(requests, 1)
+        service.close()
+
     def test_insufficient_credits_circuit_stops_calls_until_cleared(self):
         # The key is valid and the account is real; the balance is empty. A
         # latch here would refuse the call made right after Credits are added,

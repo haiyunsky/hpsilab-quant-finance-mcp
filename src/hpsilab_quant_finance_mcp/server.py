@@ -122,6 +122,22 @@ StockReportImageType = Literal[
 ]
 
 
+# Credits a signed-in account is charged per call, advertised in tools/list as
+# `x-credits`. Mirrors the hosted API's tool catalog (price_version 2026-08-v1);
+# the hosted service is the authority and enforces the actual charge.
+CREDIT_PRICES = {
+    "get_ai_prediction": 2,
+    "get_iv_radar": 3,
+    "get_option_pressure": 4,
+    "get_monte_carlo": 5,
+    "get_equity_curve": 6,
+    "analyze_stock": 12,
+    "get_pretrade_risk_scan": 15,
+    "generate_stock_images": 18,
+    "generate_stock_research_report": 30,
+}
+
+
 # ── shared service adapter ─────────────────────────────────────────────────────
 
 _service = QuantFinanceService()
@@ -159,7 +175,7 @@ _TICKER_FIELD = Field(
 # ── Tool 1 — comprehensive analysis ───────────────────────────────────────────
 
 
-@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free", "x-credits": CREDIT_PRICES["analyze_stock"]})
 def analyze_stock(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Run a full institutional-grade quantitative analysis for a single stock.
@@ -198,7 +214,7 @@ def analyze_stock(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
 # ── Tool 2 — IV radar ─────────────────────────────────────────────────────────
 
 
-@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free", "x-credits": CREDIT_PRICES["get_iv_radar"]})
 def get_iv_radar(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Retrieve implied-volatility (IV) metrics for a single stock.
@@ -230,7 +246,7 @@ def get_iv_radar(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
 # ── Tool 3 — option pressure ──────────────────────────────────────────────────
 
 
-@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free", "x-credits": CREDIT_PRICES["get_option_pressure"]})
 def get_option_pressure(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Retrieve options-market positioning and dealer-hedging pressure zones.
@@ -260,7 +276,7 @@ def get_option_pressure(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]
 # ── Tool 4 — Monte Carlo ──────────────────────────────────────────────────────
 
 
-@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free", "x-credits": CREDIT_PRICES["get_monte_carlo"]})
 def get_monte_carlo(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Run a Monte Carlo price-path simulation for a stock over the next 10
@@ -300,7 +316,7 @@ def get_monte_carlo(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
 # ── Tool 5 — AI prediction ────────────────────────────────────────────────────
 
 
-@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free", "x-credits": CREDIT_PRICES["get_ai_prediction"]})
 def get_ai_prediction(
     symbol: Annotated[
         str,
@@ -347,7 +363,7 @@ def get_ai_prediction(
 # ── Tool 6 — equity curves ────────────────────────────────────────────────────
 
 
-@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free"})
+@mcp.tool(annotations=READ_ONLY_ANNOTATIONS, meta={"x-tier": "free", "x-credits": CREDIT_PRICES["get_equity_curve"]})
 def get_equity_curve(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     """
     Retrieve backtested equity curves and performance metrics for standard
@@ -385,8 +401,9 @@ def get_equity_curve(symbol: Annotated[str, _TICKER_FIELD]) -> dict[str, Any]:
     annotations=CREATE_EXTERNAL_ARTIFACT_ANNOTATIONS,
     meta={
         "x-tier": "pro",
+        "x-credits": CREDIT_PRICES["generate_stock_research_report"],
         "x-access": {
-            "signed_in": "free",
+            "signed_in": "credits",
             "anonymous": {"payment": "x402", "amount_usdc": 0.35},
         },
     },
@@ -450,7 +467,7 @@ def generate_stock_research_report(
 
 @mcp.tool(
     annotations=CREATE_EXTERNAL_ARTIFACT_ANNOTATIONS,
-    meta={"x-tier": "free"},
+    meta={"x-tier": "free", "x-credits": CREDIT_PRICES["generate_stock_images"]},
 )
 def generate_stock_images(
     symbol: Annotated[
@@ -514,8 +531,9 @@ def generate_stock_images(
     annotations=READ_ONLY_ANNOTATIONS,
     meta={
         "x-tier": "pro",
+        "x-credits": CREDIT_PRICES["get_pretrade_risk_scan"],
         "x-access": {
-            "signed_in": "free",
+            "signed_in": "credits",
             "anonymous": {"payment": "x402", "amount_usdc": 0.15},
         },
     },
@@ -579,13 +597,15 @@ def get_pretrade_risk_scan(
             afterValue      : float — the scanned stock's own value
             unit            : str   — "%" or "" (unitless, e.g. beta)
             higherIsRiskier : bool  — whether an increase in this metric is worse
-        distribution   : dict  — the stock's forward return distribution:
+        distribution   : dict  — the stock's simulated forward return
+                                  distribution over methodology.monteCarlo
+                                  .horizonDays trading days (10):
                                   {"bins": list, "frequencies": list,
                                    "kde_x": list, "kde_y": list}
-        range_90       : dict  — {"lower": float, "upper": float} 90 % CI on
-                                  forward return (%)
-        mean           : float — expected forward return (%)
-        threshold      : float — reference return threshold used in the scan
+        range_90       : dict  — {"lower": float, "upper": float} 5th-95th
+                                  percentile of that forward return (%)
+        mean           : float — mean simulated forward return (%)
+        threshold      : float — break-even line of the distribution (0.0)
         sizingChecks   : list  — pass/warn/fail guardrail checks on the stock's
                                   own metrics, each a dict:
             label   : str — "Volatility" | "Drawdown Risk" | "Market Exposure"
@@ -595,7 +615,10 @@ def get_pretrade_risk_scan(
                             Liquidity is the 20-day average of close x volume
                             in the ticker's quote currency (no FX conversion);
                             the service warns below 5,000,000 and fails below
-                            500,000, although its detail text prints $50M / $5M.
+                            500,000, and the detail text states those limits.
+                            Services deployed before 2026-10-12 print
+                            $50M / $5M in the text; the limits applied were
+                            5,000,000 / 500,000 throughout.
         exposure       : dict  — portfolio concentration impact:
             available            : bool  — false if the user has no watchlist
                                             symbols to compare against
@@ -630,10 +653,26 @@ def get_pretrade_risk_scan(
                                  watchlist to see correlation.") — surface this
                                  to the user instead of guessing why the section
                                  is empty
+        methodology    : dict  — how the scan was computed, read from the
+                                  constants the computation uses. Absent from
+                                  services deployed before 2026-10-12. Includes:
+            monteCarlo  : dict — {"model": "gbm", "horizonDays": int (10),
+                                  "paths": int, "seeded": bool}; horizonDays is
+                                  the horizon of distribution / range_90 / mean
+            var         : dict — {"method": "historical", "confidence": 0.95,
+                                  "horizonDays": 1}
+            thresholds  : dict — warn/fail limits for every check, e.g.
+                                  "turnoverBelow": {"warn": 5000000,
+                                  "fail": 500000}
+            windowStart, windowEnd, lookbackCalendarDays, observations,
+            benchmark, benchmarkFallback, returns, annualizationDays,
+            beta, maxDrawdownDays
 
     Notes
     -----
     - Requires a valid HPSILAB_API_KEY.
+    - Each call deducts Credits from a signed-in account (`x-credits` in this
+      tool's metadata). Confirm with the user before calling it.
     - Exposure and correlation sections assume the user has an existing
       tracked watchlist/portfolio. If none exists, "available" is false in
       both sections, their data fields are null/empty, and each includes a
@@ -663,12 +702,16 @@ def register_account(
     ],
 ) -> dict[str, Any]:
     """
-    Reissue account credentials for an already authenticated HPSILab account.
+    Register a free HPSILab account from the client and receive an API key.
 
     Use this tool when:
-    A valid HPSILAB_API_KEY is required. Without one, this tool returns the
-    same `api_key_required` registration prompt as every other SDK call and
-    sends no request. New users register at https://hpsilab.com/register.
+    - The user has no API key yet and asks to sign up from here, with their
+      own email address. This is the only tool that works without
+      HPSILAB_API_KEY; the user can also register at https://hpsilab.com/register.
+    - The user already has a key and asks for a fresh one for the same account.
+
+    It creates an account and sends a verification email, so call it only when
+    the user asks, never to get around another tool's error on your own.
 
     After it succeeds, set HPSILAB_API_KEY to the returned `api_key` so the
     other tools authenticate as this account. The account is also bound to this

@@ -6,6 +6,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-13
+
+### Changed
+
+- `register_account` works without an API key again. Since 0.8.6 it returned
+  `api_key_required` when no key was configured, so the tool named
+  "register" could not register anyone who needed it, and the
+  `allowance_exhausted` remedy that names it was a dead end. With no key it
+  now calls the SDK's standalone `hpsilab_mcp.register()` (the 0.8.0
+  behavior); with a key it still calls `client.register_account()`. Keyless
+  calls share one local burst-limit identity, the email is validated locally
+  first, and a 409 for an address owned by another account is surfaced, not
+  retried. The hosted API already exempts `/api/agent/register` from its
+  key gate and limits it per caller. The research tools still require a key.
+- An out-of-Credits refusal is reported as `insufficient_credits` for every
+  tool. For `get_pretrade_risk_scan` and `generate_stock_research_report` the
+  API attaches an x402 offer (`accepts`) to its `insufficient_credits` 402,
+  and the SDK raises any 402 with an offer as a payment challenge, so this
+  package reported `payment_required` with a hint to configure a wallet. It
+  never configures a wallet, so the body's own `error` now decides: the
+  payload carries `credits_required`, `credits_remaining`, `upgrade_url`,
+  `next_actions`, and `credits_charged: 0`, the status stays 402, and the
+  60-second Credits circuit opens as it does for other tools. A real payment
+  challenge is still `payment_required`.
+
+### Fixed
+
+- `tools/list` metadata said `x-access.signed_in: "free"` for
+  `get_pretrade_risk_scan` and `generate_stock_research_report`. Signed-in
+  accounts pay Credits for both (15 and 30); the value is now `"credits"`.
+- `get_pretrade_risk_scan` documents the `methodology` block the API returns
+  from 2026-10-12: `monteCarlo.horizonDays` (10 trading days) is the horizon
+  of `distribution`, `range_90`, and `mean`, and `thresholds` states every
+  check's limits. `range_90` is the 5th–95th percentile and `threshold` is the
+  break-even line. Liquidity's `detail` text now states the limits it applies
+  (5,000,000 / 500,000); services deployed earlier print $50M / $5M while
+  applying the same limits.
+
+### Added
+
+- `x-credits` in every research tool's `tools/list` metadata: the Credits a
+  signed-in account is charged per call (price version 2026-08-v1).
+- `skills/hpsilab-quant-research/SKILL.md`: an agent skill describing when to
+  use each tool, the horizon of each result, the SPY-versus-portfolio split in
+  `get_pretrade_risk_scan`, which calls cost Credits and need confirmation,
+  and how to handle each error code.
+
 ## [0.10.2] - 2026-10-12
 
 ### Fixed

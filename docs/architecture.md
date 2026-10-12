@@ -47,7 +47,7 @@ This service is independent of MCP transport and can be unit-tested without star
 
 ### `auth.py`
 
-`CredentialProvider` is the boundary between service access and credential acquisition. All financial research tools require a valid API key. The current implementation reads `HPSILAB_API_KEY` for stdio and local development, while the Official Remote MCP endpoint receives it as a bearer credential. The compatibility-only `register_account` tool remains registered in code but is not a public product feature or onboarding path. New users register at `https://hpsilab.com/register` and manage keys in Settings.
+`CredentialProvider` is the boundary between service access and credential acquisition. All financial research tools require a valid API key. The current implementation reads `HPSILAB_API_KEY` for stdio and local development, while the Official Remote MCP endpoint receives it as a bearer credential. `register_account` is the one tool that works without a key: with none configured it registers through the SDK's standalone `hpsilab_mcp.register()`, and with a key it calls `client.register_account()` on that key's client. New users can also register at `https://hpsilab.com/register` and manage keys in Settings.
 
 ## Transport selection
 

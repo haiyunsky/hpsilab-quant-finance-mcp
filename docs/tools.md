@@ -4,17 +4,21 @@ The HPSILab product surface contains 9 public financial research tools and one a
 
 ## Financial research tools
 
-| Tool | Use it for | Key output semantics | Side effects |
-| --- | --- | --- | --- |
-| `analyze_stock` | A broad, multi-signal view of one ticker | Directional signal, confidence, supporting metrics, and risk context | Read-only and idempotent |
-| `get_ai_prediction` | Next-session directional model analysis | Prediction, up probability, confidence, model votes, regime, and signal strength | Read-only and idempotent |
-| `get_iv_radar` | Historical context for implied volatility | ATM IV, IV rank, IV percentile, skew, term structure, and regime | Read-only and idempotent |
-| `get_option_pressure` | Important options-derived price levels | Max pain, gamma wall, expected move, squeeze targets, and strike concentrations | Read-only and idempotent |
-| `get_monte_carlo` | Scenario analysis for a 10-trading-day horizon | Simulated mean and median, 90% range, and probability of finishing above resistance or below it | Read-only and idempotent |
-| `get_equity_curve` | Comparing standard strategy backtests | Returns, Sharpe and Sortino ratios, drawdown, win rate, and equity curves | Read-only and idempotent |
-| `get_pretrade_risk_scan` | Reviewing a proposed position before a trade | Volatility, beta, VaR, drawdown, position size, exposure, correlation, checks, and warnings | Read-only and idempotent |
-| `generate_stock_images` | Creating charts for an analysis workflow | Hosted image artifacts and URLs | Creates artifacts; not idempotent; may consume quota |
-| `generate_stock_research_report` | Creating a structured research artifact | Markdown report, normalized symbol, and generation timestamp | Creates an artifact; not idempotent; may consume quota |
+| Tool | Use it for | Key output semantics | Side effects | Credits |
+| --- | --- | --- | --- | --- |
+| `analyze_stock` | A broad, multi-signal view of one ticker | Directional signal, confidence, supporting metrics, and risk context | Read-only and idempotent | 12 |
+| `get_ai_prediction` | Next-session directional model analysis | Prediction, up probability, confidence, model votes, regime, and signal strength | Read-only and idempotent | 2 |
+| `get_iv_radar` | Historical context for implied volatility | ATM IV, IV rank, IV percentile, skew, term structure, and regime | Read-only and idempotent | 3 |
+| `get_option_pressure` | Important options-derived price levels | Max pain, gamma wall, expected move, squeeze targets, and strike concentrations | Read-only and idempotent | 4 |
+| `get_monte_carlo` | Scenario analysis for a 10-trading-day horizon | Simulated mean and median, 90% range, and probability of finishing above resistance or below it | Read-only and idempotent | 5 |
+| `get_equity_curve` | Comparing standard strategy backtests | Returns, Sharpe and Sortino ratios, drawdown, win rate, and equity curves | Read-only and idempotent | 6 |
+| `get_pretrade_risk_scan` | Reviewing a proposed position before a trade | Volatility, beta, VaR, drawdown, position size, exposure, correlation, checks, warnings, and a `methodology` block stating the 10-trading-day simulation horizon and every check's limits | Read-only and idempotent | 15 |
+| `generate_stock_images` | Creating charts for an analysis workflow | Hosted image artifacts and URLs | Creates artifacts; not idempotent; may consume quota | 18 |
+| `generate_stock_research_report` | Creating a structured research artifact | Markdown report, normalized symbol, and generation timestamp | Creates an artifact; not idempotent; may consume quota | 30 |
+
+Credits are what a signed-in account is charged per call (price version
+2026-08-v1). The local package also advertises them in each tool's metadata
+as `x-credits`; the hosted service is the authority and enforces the charge.
 
 All financial research tools require a valid API key. They accept one US-listed equity or ETF ticker, such as `NVDA`, `AAPL`, `SPY`, or `BRK.B`. Do not pass a company name. Coverage of options-dependent fields varies by symbol and account tier.
 
@@ -26,9 +30,11 @@ Live research output may change between calls. Generated URLs can expire. Client
 | --- | --- | --- | --- |
 | `register_account` | Obtaining credentials for the calling agent, and lifting the free evaluation ceiling | Registered address, plan tier, `email_verified`, an `api_key` to set as `HPSILAB_API_KEY`, and `already_registered` | Creates an account and sends a verification email; not idempotent (a repeat call returns the same account with a fresh key) |
 
-It requires a valid `HPSILAB_API_KEY` like every other tool; without one it
-returns the same `api_key_required` prompt and sends no request. Genuinely new
-users register at [https://hpsilab.com/register](https://hpsilab.com/register).
+It is the only tool that works without `HPSILAB_API_KEY`. With no key
+configured it registers through the SDK's standalone `hpsilab_mcp.register()`;
+with a key it returns that caller's account with a fresh key. New users can
+also register at [https://hpsilab.com/register](https://hpsilab.com/register).
+Call it only when the user asks, with the user's own email address.
 
 This is the first entry in the `next_actions` list of an `allowance_exhausted`
 refusal, because it is the one remedy an agent can take by itself: one call,

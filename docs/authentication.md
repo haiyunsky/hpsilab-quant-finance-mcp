@@ -10,8 +10,8 @@ Authorization: Bearer hpsi_your_key
 
 The official endpoint is `https://hpsilab.com/mcp`. All financial research tools require a valid API key. Do not configure the research credential as optional.
 
-When no key is configured, the local Python package does not send a request or
-offer an x402 payment quote. It returns exactly:
+When no key is configured, the local Python package's research tools do not
+send a request or offer an x402 payment quote. They return exactly:
 
 ```json
 {
@@ -21,6 +21,11 @@ offer an x402 payment quote. It returns exactly:
   "docs_url": "https://hpsilab.com/developer/v2"
 }
 ```
+
+The one exception is `register_account`. Without a key it registers a free
+account through the SDK's `hpsilab_mcp.register()` and returns an `api_key`
+for the user to store as `HPSILAB_API_KEY`. It is subject to the same local
+burst limit as the other tools.
 
 ## Local stdio
 

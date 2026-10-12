@@ -10,9 +10,10 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from hpsilab_mcp import HpsiMcpAuthError
+from hpsilab_mcp import HpsiMcpAPIError, HpsiMcpAuthError, HpsiMcpTimeoutError
 
 from hpsilab_quant_finance_mcp import server
+from hpsilab_quant_finance_mcp.quota import BurstRateLimiter
 from hpsilab_quant_finance_mcp.service import QuantFinanceService
 
 
@@ -238,7 +239,7 @@ def make_fake_register_client(result=None, exception=None):
 
 
 def make_fake_register_fn(result=None, exception=None):
-    """Stand-in proving the retired no-key registration path is not called."""
+    """Stand-in for hpsilab_mcp.register(), the keyless registration path."""
     calls = []
 
     def _fn(*, email):
@@ -261,7 +262,9 @@ class RegisterAccountTests(unittest.TestCase):
         "message": "Registered.",
     }
 
-    def test_missing_api_key_does_not_construct_client_or_send_registration(self):
+    def test_missing_api_key_registers_through_the_standalone_sdk_function(self):
+        """With no key there is no client to build: the keyless SDK entry point
+        registers, and no SDK client is constructed."""
         register_fn = make_fake_register_fn(result=self.PAYLOAD)
         fake_cls = make_fake_register_client(result={**self.PAYLOAD, "api_key": "should-not-be-used"})
 
@@ -271,9 +274,57 @@ class RegisterAccountTests(unittest.TestCase):
                 FakeClient.last_instance = None
                 result = server.register_account("agent@example.com")
 
-        self.assertEqual(result["error"], "api_key_required")
-        self.assertEqual(register_fn.calls, [])
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["api_key"], "hpsi_newkey")
+        self.assertIn("disclaimer", result)
+        self.assertEqual(register_fn.calls, ["agent@example.com"])
         self.assertIsNone(FakeClient.last_instance)
+
+    def test_missing_api_key_still_rejects_a_malformed_email_locally(self):
+        register_fn = make_fake_register_fn(result=self.PAYLOAD)
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(register_fn=register_fn)):
+                result = server.register_account("not-an-email")
+
+        self.assertEqual(result["error_code"], "invalid_email")
+        self.assertEqual(register_fn.calls, [])
+
+    def test_keyless_email_collision_is_surfaced_not_retried(self):
+        register_fn = make_fake_register_fn(
+            exception=HpsiMcpAPIError("Registration failed (409): already registered", status_code=409)
+        )
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(register_fn=register_fn)):
+                result = server.register_account("someone-else@example.com")
+
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["status_code"], 409)
+        self.assertEqual(register_fn.calls, ["someone-else@example.com"])
+
+    def test_keyless_timeout_is_reported_without_retrying(self):
+        register_fn = make_fake_register_fn(exception=HpsiMcpTimeoutError("Request timed out."))
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with mock.patch.object(server, "_service", QuantFinanceService(register_fn=register_fn)):
+                result = server.register_account("agent@example.com")
+
+        self.assertEqual(result["error_code"], "request_timeout")
+        self.assertEqual(len(register_fn.calls), 1)
+
+    def test_keyless_registration_is_burst_limited(self):
+        """A loop must not be able to send unlimited signups: keyless calls
+        share one local per-minute identity."""
+        register_fn = make_fake_register_fn(result=self.PAYLOAD)
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            service = QuantFinanceService(register_fn=register_fn, quota_limiter=BurstRateLimiter())
+            results = [service.register_account(f"agent{i}@example.com") for i in range(11)]
+
+        self.assertTrue(all(r["status"] == "success" for r in results[:10]))
+        self.assertEqual(results[10]["error_code"], "rate_limited")
+        self.assertEqual(len(register_fn.calls), 10)
 
     def test_passes_an_existing_key_through_when_present(self):
         """A configured key uses the existing client instance method, not
