@@ -534,10 +534,16 @@ def get_pretrade_risk_scan(
     ],
 ) -> dict[str, Any]:
     """
-    Run a pre-trade risk scan for adding a single stock to the user's tracked
-    portfolio, covering volatility/beta/VaR/drawdown deltas, market regime,
-    a forward return distribution, position-sizing checks, sector/symbol
-    exposure impact, and correlation against existing holdings.
+    Run a pre-trade risk scan for a single stock: the stock's own
+    volatility/beta/VaR/drawdown set against the SPY benchmark, market regime,
+    a forward return distribution for the stock, position-sizing checks on the
+    stock's own metrics, and — against the user's tracked watchlist — the
+    sector/symbol exposure impact of adding it and its correlation to existing
+    holdings.
+
+    riskDeltas compare SPY with the stock on its own. They are NOT the risk of
+    the user's portfolio before and after the trade; only `exposure` and
+    `correlation` use the portfolio.
 
     Use this tool when:
     - You need a risk-first check before evaluating or placing a trade.
@@ -564,26 +570,32 @@ def get_pretrade_risk_scan(
         asOf           : str   — ISO 8601 date the scan was computed
         regime         : str   — "bull" | "bear" | "chop" market regime
         regimeConfidence: float — 0–1 confidence in the regime classification
-        riskDeltas     : list  — before/after risk metrics from adding the
-                                  position, each item a dict with:
+        riskDeltas     : list  — the stock's own risk metrics next to the SPY
+                                  benchmark's (field names are historical;
+                                  neither side is a portfolio), each a dict:
             label           : str   — e.g. "Annualized Volatility", "Beta (vs SPY)",
                                        "1-Day VaR (95%)", "Max Drawdown (1Y)"
-            beforeValue     : float — metric value for current portfolio
-            afterValue      : float — metric value after adding the position
+            beforeValue     : float — the SPY benchmark's value (beta is 1.0)
+            afterValue      : float — the scanned stock's own value
             unit            : str   — "%" or "" (unitless, e.g. beta)
             higherIsRiskier : bool  — whether an increase in this metric is worse
-        distribution   : dict  — forward return distribution:
+        distribution   : dict  — the stock's forward return distribution:
                                   {"bins": list, "frequencies": list,
                                    "kde_x": list, "kde_y": list}
         range_90       : dict  — {"lower": float, "upper": float} 90 % CI on
                                   forward return (%)
         mean           : float — expected forward return (%)
         threshold      : float — reference return threshold used in the scan
-        sizingChecks   : list  — pass/warn/fail guardrail checks, each a dict:
+        sizingChecks   : list  — pass/warn/fail guardrail checks on the stock's
+                                  own metrics, each a dict:
             label   : str — "Volatility" | "Drawdown Risk" | "Market Exposure"
                             | "Liquidity"
             status  : str — "pass" | "warn" | "fail"
-            detail  : str — human-readable explanation with the thresholds used
+            detail  : str — human-readable explanation with the thresholds used.
+                            Liquidity is the 20-day average of close x volume
+                            in the ticker's quote currency (no FX conversion);
+                            the service warns below 5,000,000 and fails below
+                            500,000, although its detail text prints $50M / $5M.
         exposure       : dict  — portfolio concentration impact:
             available            : bool  — false if the user has no watchlist
                                             symbols to compare against

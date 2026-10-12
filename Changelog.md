@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-10-12
+
+### Fixed
+
+- `get_pretrade_risk_scan` described `riskDeltas` as the user's portfolio risk
+  before and after adding the position (`beforeValue` "for current portfolio",
+  `afterValue` "after adding the position"). The service has always returned
+  the SPY benchmark's own metrics as `beforeValue` and the scanned stock's own
+  metrics as `afterValue`; neither side is a portfolio. The tool description
+  and `examples/risk_scan.md` now say so, and note that the forward-return
+  distribution and sizing checks are also computed on the stock alone — only
+  `exposure` and `correlation` use the watchlist. Field names are unchanged.
+- The Liquidity sizing check is now documented as the service applies it: a
+  20-day average of close x volume in the ticker's quote currency, warning
+  below 5,000,000 and failing below 500,000, although its `detail` text prints
+  $50M / $5M.
+
 ## [0.10.1] - 2026-09-30
 
 ### Fixed

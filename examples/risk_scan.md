@@ -5,7 +5,8 @@
 ```text
 Run HPSILab's pre-trade risk scan for NVDA. Report:
 - market regime and confidence;
-- every before/after risk delta with units;
+- each risk metric for NVDA next to the SPY benchmark, with units (this is the
+  stock on its own versus SPY, not portfolio risk before and after the trade);
 - every sizing check and its pass/warn/fail status;
 - sector and symbol exposure changes;
 - average, highest, and lowest portfolio correlations;
@@ -27,7 +28,7 @@ bullish.
 ```text
 For AMD, run the pre-trade risk scan and Monte Carlo tools. Compare their ranges,
 horizons, and downside measures without assuming they use the same model. Explain
-why a portfolio-aware risk result can differ from a standalone price simulation.
+why the two simulations can differ even though both model the stock on its own.
 ```
 
 ## Missing portfolio context
