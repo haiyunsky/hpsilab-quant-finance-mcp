@@ -43,6 +43,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   break-even line. Liquidity's `detail` text now states the limits it applies
   (5,000,000 / 500,000); services deployed earlier print $50M / $5M while
   applying the same limits.
+- `get_pretrade_risk_scan` documents that it requires a paid plan (Developer,
+  Team, Enterprise, Pro, or Pro Lifetime) in addition to its 15 Credits. The
+  API checks Credits first (402 `insufficient_credits`) and the plan second
+  (403, not charged). Verified against production on 2026-10-13 with a
+  verified Free account holding 100 Credits.
 
 ### Added
 

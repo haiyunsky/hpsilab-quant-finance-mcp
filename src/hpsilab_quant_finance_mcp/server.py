@@ -671,8 +671,13 @@ def get_pretrade_risk_scan(
     Notes
     -----
     - Requires a valid HPSILAB_API_KEY.
-    - Each call deducts Credits from a signed-in account (`x-credits` in this
-      tool's metadata). Confirm with the user before calling it.
+    - Requires a paid plan (Developer, Team, Enterprise, Pro, or Pro
+      Lifetime). A Free account is refused with HTTP 403 (`http_error`,
+      status_code 403) and is not charged.
+    - Each call deducts Credits from the account (`x-credits` in this tool's
+      metadata). The Credits check runs first, so an empty balance is
+      `insufficient_credits` (402) even on a Free account. Confirm with the
+      user before calling it.
     - Exposure and correlation sections assume the user has an existing
       tracked watchlist/portfolio. If none exists, "available" is false in
       both sections, their data fields are null/empty, and each includes a

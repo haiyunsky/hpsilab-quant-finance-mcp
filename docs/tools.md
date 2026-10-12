@@ -12,7 +12,7 @@ The HPSILab product surface contains 9 public financial research tools and one a
 | `get_option_pressure` | Important options-derived price levels | Max pain, gamma wall, expected move, squeeze targets, and strike concentrations | Read-only and idempotent | 4 |
 | `get_monte_carlo` | Scenario analysis for a 10-trading-day horizon | Simulated mean and median, 90% range, and probability of finishing above resistance or below it | Read-only and idempotent | 5 |
 | `get_equity_curve` | Comparing standard strategy backtests | Returns, Sharpe and Sortino ratios, drawdown, win rate, and equity curves | Read-only and idempotent | 6 |
-| `get_pretrade_risk_scan` | Reviewing a proposed position before a trade | Volatility, beta, VaR, drawdown, position size, exposure, correlation, checks, warnings, and a `methodology` block stating the 10-trading-day simulation horizon and every check's limits | Read-only and idempotent | 15 |
+| `get_pretrade_risk_scan` | Reviewing a proposed position before a trade | Volatility, beta, VaR, drawdown, position size, exposure, correlation, checks, warnings, and a `methodology` block stating the 10-trading-day simulation horizon and every check's limits | Read-only and idempotent; requires a paid plan (Developer, Team, Enterprise, Pro, Pro Lifetime), and a Free account gets 403 with no charge | 15 |
 | `generate_stock_images` | Creating charts for an analysis workflow | Hosted image artifacts and URLs | Creates artifacts; not idempotent; may consume quota | 18 |
 | `generate_stock_research_report` | Creating a structured research artifact | Markdown report, normalized symbol, and generation timestamp | Creates an artifact; not idempotent; may consume quota | 30 |
 
