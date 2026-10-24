@@ -1,9 +1,10 @@
 """Risk check before a trade idea, with LangGraph and langchain-mcp-adapters.
 
-    pip install langchain-mcp-adapters langgraph "langchain[anthropic]"
-    export HPSILAB_API_KEY=hpsi_your_key ANTHROPIC_API_KEY=sk-ant-...
-    python langgraph_risk_gate.py NVDA
+pip install langchain-mcp-adapters langgraph "langchain[anthropic]"
+export HPSILAB_API_KEY=hpsi_your_key ANTHROPIC_API_KEY=sk-ant-...
+python langgraph_risk_gate.py NVDA
 """
+
 import asyncio
 import os
 import sys

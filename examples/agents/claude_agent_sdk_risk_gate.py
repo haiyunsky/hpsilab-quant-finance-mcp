@@ -1,9 +1,10 @@
 """Risk check before a trade idea, with the Claude Agent SDK.
 
-    pip install claude-agent-sdk
-    export HPSILAB_API_KEY=hpsi_your_key ANTHROPIC_API_KEY=sk-ant-...
-    python claude_agent_sdk_risk_gate.py NVDA
+pip install claude-agent-sdk
+export HPSILAB_API_KEY=hpsi_your_key ANTHROPIC_API_KEY=sk-ant-...
+python claude_agent_sdk_risk_gate.py NVDA
 """
+
 import asyncio
 import os
 import sys

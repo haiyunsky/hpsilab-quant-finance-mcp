@@ -1,9 +1,10 @@
 """Risk check before a trade idea, with the OpenAI Agents SDK.
 
-    pip install openai-agents
-    export HPSILAB_API_KEY=hpsi_your_key OPENAI_API_KEY=sk-...
-    python openai_agents_risk_gate.py NVDA
+pip install openai-agents
+export HPSILAB_API_KEY=hpsi_your_key OPENAI_API_KEY=sk-...
+python openai_agents_risk_gate.py NVDA
 """
+
 import asyncio
 import os
 import sys
