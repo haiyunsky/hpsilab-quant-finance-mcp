@@ -4,7 +4,7 @@ The hosted Streamable HTTP endpoint is recommended for Claude Code. Local stdio 
 
 ## Installation
 
-Install a current Claude Code release, or use a Claude surface that supports custom MCP servers. [Register](https://hpsilab.com/register), sign in, and generate an API key in Settings.
+Install a current Claude Code release, or use a Claude surface that supports custom MCP servers. [Register](https://hpsilab.com/register) a free account. The hosted endpoint signs you in with OAuth; generate an API key in Settings only for local stdio or clients without OAuth.
 
 For local stdio, also install [`uv`](https://docs.astral.sh/uv/) or the Python package:
 
@@ -14,7 +14,16 @@ pip install -U hpsilab-quant-finance-mcp
 
 ## Configuration
 
-### Claude Code: hosted HTTP
+### Claude Code: hosted HTTP with OAuth sign-in
+
+```bash
+claude mcp add --transport http --scope user hpsilab https://hpsilab.com/mcp
+```
+
+On first use Claude Code opens the HPSILab sign-in page; no key is pasted. In
+Claude.ai, add a custom connector with the same URL.
+
+### Claude Code: hosted HTTP with an API key
 
 ```bash
 claude mcp add --transport http --scope user hpsilab https://hpsilab.com/mcp \

@@ -91,7 +91,8 @@ for key handling and rotation.
 
 Building an agent? [examples/agents](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/tree/main/examples/agents)
 has one-file risk-check agents for the OpenAI Agents SDK, the Claude Agent SDK and
-LangGraph.
+LangGraph. Walkthrough:
+[docs/guide-risk-gate-for-trading-agents.md](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/guide-risk-gate-for-trading-agents.md).
 
 ## Connect: local stdio
 

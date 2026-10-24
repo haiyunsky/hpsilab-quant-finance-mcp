@@ -18,6 +18,7 @@ docs/*
 !docs/python-sdk.md
 !docs/authentication.md
 !docs/self-hosting.md
+!docs/guide-risk-gate-for-trading-agents.md
 uv.lock
 .env
 .env.*
