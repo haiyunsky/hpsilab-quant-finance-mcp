@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-10-24
+
+Documentation and registry metadata only; no code or tool-surface change.
+
+### Changed
+
+- README, `docs/authentication.md` and `server.json` document OAuth 2.1
+  sign-in on the hosted endpoint, which already worked but was described
+  nowhere: an OAuth-capable client needs only `https://hpsilab.com/mcp`. The
+  remote `Authorization` header in `server.json` is therefore optional.
+- README opening leads with what an agent gets (pre-trade risk scan, options
+  structure, 10-trading-day Monte Carlo) and the version table is current
+  (it still said 0.10.0).
+- `server.json` description shortened to the directory one-liner.
+
 ## [0.11.0] - 2026-10-13
 
 ### Changed

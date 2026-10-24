@@ -2,19 +2,19 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.haiyunsky/hpsilab-quant-finance-mcp",
   "title": "HPSILab Quant Finance",
-  "description": "HPSILab Quant finance MCP for US stocks, ETFs, options, Monte Carlo, backtesting, and risk analysis.",
+  "description": "Stock & options risk analytics for AI agents: pre-trade risk scan, IV, gamma walls, Monte Carlo.",
   "repository": {
     "url": "https://github.com/haiyunsky/hpsilab-quant-finance-mcp",
     "source": "github"
   },
-  "version": "0.11.0",
+  "version": "0.11.1",
   "websiteUrl": "https://hpsilab.com",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "hpsilab-quant-finance-mcp",
-      "version": "0.11.0",
+      "version": "0.11.1",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"
@@ -37,8 +37,8 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "Bearer API key generated and managed in HPSILab Settings. All financial research tools require a valid API key.",
-          "isRequired": true,
+          "description": "Optional. Clients that support MCP OAuth can omit it and sign in to HPSILab instead; otherwise send a Bearer API key from HPSILab Settings. Research tools need one of the two.",
+          "isRequired": false,
           "isSecret": true
         }
       ]

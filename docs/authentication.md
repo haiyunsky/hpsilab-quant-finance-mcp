@@ -2,13 +2,24 @@
 
 ## Official Remote MCP
 
-[Register a free HPSILab account](https://hpsilab.com/register), sign in, and generate an API key from the Settings page. Send that key on every hosted MCP connection as a bearer credential:
+The official endpoint `https://hpsilab.com/mcp` accepts either of two credentials.
+
+**OAuth 2.1 sign-in.** Clients that support MCP authorization discover the
+authorization server from
+`https://hpsilab.com/.well-known/oauth-protected-resource/mcp` and open the
+HPSILab sign-in page on first use; no key is pasted anywhere. Claude Code:
+
+```bash
+claude mcp add --transport http hpsilab https://hpsilab.com/mcp
+```
+
+**API key.** [Register a free HPSILab account](https://hpsilab.com/register), sign in, and generate an API key from the Settings page. Send that key on every hosted MCP connection as a bearer credential:
 
 ```text
 Authorization: Bearer hpsi_your_key
 ```
 
-The official endpoint is `https://hpsilab.com/mcp`. All financial research tools require a valid API key. Do not configure the research credential as optional.
+All financial research tools require one of the two. When a client uses neither, configure the API key; do not leave the research credential out.
 
 When no key is configured, the local Python package's research tools do not
 send a request or offer an x402 payment quote. They return exactly:

@@ -6,12 +6,19 @@
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/LICENSE)
 
-HPSILab is an open-source Python quantitative finance MCP server for research on
-US equities, ETFs, and supported options. It brings stock signals, implied
-volatility, options analytics, Monte Carlo simulation, AI prediction,
-backtesting, and risk analysis into ChatGPT, Claude, Cursor, VS Code, and other
-MCP clients. Connect once, ask in natural language, and receive structured
-results that an assistant can compare and explain.
+Stock and options risk analytics for AI agents. Connect one remote MCP
+endpoint, `https://hpsilab.com/mcp`, sign in with OAuth (no API key to paste),
+and your agent can call:
+
+- a **pre-trade risk scan**: volatility, beta, drawdown and VaR against SPY with
+  fixed pass/warn/fail limits, plus sizing, sector exposure and correlation checks;
+- **options structure**: IV level, rank and skew, gamma wall, call/put walls, max pain;
+- a **10-trading-day Monte Carlo** price range and odds of finishing higher;
+- `analyze_stock` for a one-call overview, plus AI prediction and backtests.
+
+Results are structured JSON with machine-readable errors, for US-listed
+equities, ETFs and supported options. This repository is the open-source Python
+server (MIT); the hosted endpoint runs the same tool surface.
 
 > Research and educational use only. HPSILab does not provide investment advice
 > and does not execute trades.
@@ -21,16 +28,31 @@ results that an assistant can compare and explain.
 | | |
 | --- | --- |
 | **Registry name** | `io.github.haiyunsky/hpsilab-quant-finance-mcp` |
-| **Version** | 0.10.0 — a source checkout reports `0.10.0+source` |
+| **Version** | 0.11.1 — a source checkout reports `0.11.1+source` |
 | **Transports** | Streamable HTTP (hosted) · stdio (PyPI package) |
 | **Remote endpoint** | `https://hpsilab.com/mcp` |
 | **Package** | `pip install -U hpsilab-quant-finance-mcp` |
-| **Authentication** | Bearer API key, or `HPSILAB_API_KEY` for stdio |
+| **Authentication** | OAuth sign-in or Bearer API key (hosted), `HPSILAB_API_KEY` (stdio) |
 | **Tools** | 10 — nine financial research tools plus `register_account` |
 
 ## Connect: hosted Streamable HTTP
 
 Recommended, and requires no local installation.
+
+### With OAuth sign-in
+
+Clients that support MCP OAuth (Claude Code, Claude.ai and ChatGPT connectors,
+and others) only need the URL; they open the HPSILab sign-in page on first use.
+
+```bash
+claude mcp add --transport http hpsilab https://hpsilab.com/mcp
+```
+
+In a connector UI, add a custom connector with the URL `https://hpsilab.com/mcp`.
+
+### With an API key
+
+For clients without OAuth support, or for scripts:
 
 1. [Register a free account](https://hpsilab.com/register), sign in, and
    generate an API key from Settings.
@@ -62,7 +84,8 @@ Use HPSILab to analyze AAPL. Separate observed metrics from interpretation,
 identify conflicting signals, and finish with a concise risk summary.
 ```
 
-All financial research tools require a valid API key. See
+All financial research tools require a signed-in account: OAuth or a valid API
+key. See
 [authentication](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md)
 for key handling and rotation.
 
