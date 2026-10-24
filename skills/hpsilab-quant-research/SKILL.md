@@ -5,7 +5,7 @@ description: Quantitative research on US equities and options with the HPSILab Q
 
 # HPSILab Quant Research
 
-This skill tells you when and how to use the HPSILab Quant Finance MCP tools (package version 0.11.0). The server exposes 9 research tools and 1 account tool. Each research tool takes one US-listed stock or ETF ticker per call and returns a JSON object. The tools do not connect to a broker and cannot place, modify, or cancel orders.
+This skill tells you when and how to use the HPSILab Quant Finance MCP tools (package version 0.11.1). The server exposes 9 research tools and 1 account tool. Each research tool takes one US-listed stock or ETF ticker per call and returns a JSON object. The tools do not connect to a broker and cannot place, modify, or cancel orders.
 
 ## Before you start
 
@@ -90,7 +90,7 @@ Every research call deducts Credits (see the table). Use the fewest calls that f
 
 ## Reading the results
 
-Field names below are the documented contract in v0.11.0. Live output can change between calls, and some fields can be null or missing for a ticker. When a field is missing, say it is unavailable. Do not estimate a replacement.
+Field names below are the documented contract in v0.11.1. Live output can change between calls, and some fields can be null or missing for a ticker. When a field is missing, say it is unavailable. Do not estimate a replacement.
 
 Every successful response includes `status: "success"` and a `disclaimer`.
 
