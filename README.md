@@ -89,6 +89,10 @@ key. See
 [authentication](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/docs/authentication.md)
 for key handling and rotation.
 
+Building an agent? [examples/agents](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/tree/main/examples/agents)
+has one-file risk-check agents for the OpenAI Agents SDK, the Claude Agent SDK and
+LangGraph.
+
 ## Connect: local stdio
 
 For clients that require a local process:

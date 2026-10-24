@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `examples/agents/`: one-file risk-check agents for the OpenAI Agents SDK,
+  the Claude Agent SDK and LangGraph (langchain-mcp-adapters) against the
+  hosted endpoint, with a documented fallback when the pre-trade scan needs a
+  paid plan.
+
 ## [0.11.1] - 2026-10-24
 
 Documentation and registry metadata only; no code or tool-surface change.
