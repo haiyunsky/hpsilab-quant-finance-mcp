@@ -11,5 +11,13 @@
   "homepage": "https://hpsilab.com/connect",
   "repository": "https://github.com/haiyunsky/hpsilab-quant-finance-mcp",
   "license": "MIT",
-  "keywords": ["stocks", "options", "risk", "implied-volatility", "research", "finance"]
+  "privacyPolicyUrl": "https://hpsilab.com/privacy",
+  "keywords": [
+    "stocks",
+    "options",
+    "risk",
+    "implied-volatility",
+    "research",
+    "finance"
+  ]
 }
