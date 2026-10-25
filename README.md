@@ -6,6 +6,7 @@
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/LICENSE)
 [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/haiyunsky/hpsilab-quant-finance-mcp)
+[![HPSILab Quant Finance MCP on Glama](https://glama.ai/mcp/connectors/io.github.haiyunsky/hpsilab-quant-finance-mcp/badges/score.svg)](https://glama.ai/mcp/connectors/io.github.haiyunsky/hpsilab-quant-finance-mcp)
 
 Stock and options risk analytics for AI agents. Connect one remote MCP
 endpoint, `https://hpsilab.com/mcp`, sign in with OAuth (no API key to paste),
