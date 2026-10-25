@@ -1,0 +1,15 @@
+{
+  "name": "hpsilab",
+  "displayName": "HPSILab Quant Research",
+  "version": "1.0.0",
+  "description": "Stock and options research for US equities: a pre-trade risk check before you buy, implied volatility and options positioning, Monte Carlo price ranges, backtests and research reports, through the HPSILab connector. Research only; it never places trades.",
+  "author": {
+    "name": "HPSILab",
+    "email": "support@hpsilab.com",
+    "url": "https://hpsilab.com"
+  },
+  "homepage": "https://hpsilab.com/connect",
+  "repository": "https://github.com/haiyunsky/hpsilab-quant-finance-mcp",
+  "license": "MIT",
+  "keywords": ["stocks", "options", "risk", "implied-volatility", "research", "finance"]
+}
