@@ -2,6 +2,7 @@
 
 <!-- mcp-name: io.github.haiyunsky/hpsilab-quant-finance-mcp -->
 
+[![HPSILab in the Claude Directory](https://img.shields.io/badge/%F0%9F%A4%96%20Claude%20Directory-HPSILab-D97757)](https://claude.ai/directory/hpsilab)
 [![PyPI](https://img.shields.io/pypi/v/hpsilab-quant-finance-mcp?label=PyPI)](https://pypi.org/project/hpsilab-quant-finance-mcp/)
 [![CI](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/haiyunsky/hpsilab-quant-finance-mcp/blob/main/LICENSE)
